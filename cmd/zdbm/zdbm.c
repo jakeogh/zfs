@@ -71,7 +71,7 @@
 #include <libnvpair.h>
 #include <libzutil.h>
 
-#include "zdb.h"
+#include "zdbm.h"
 
 #define	ZDB_COMPRESS_NAME(idx) ((idx) < ZIO_COMPRESS_FUNCTIONS ?	\
 	zio_compress_table[(idx)].ci_name : "UNKNOWN")

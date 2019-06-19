@@ -45,7 +45,7 @@
 #include <sys/spa_impl.h>
 #include <sys/abd.h>
 
-#include "zdb.h"
+#include "zdbm.h"
 
 extern uint8_t dump_opt[256];
 

@@ -106,6 +106,7 @@ AC_CONFIG_FILES([
 	lib/libshare/Makefile
 	cmd/Makefile
 	cmd/zdb/Makefile
+	cmd/zdbm/Makefile
 	cmd/zhack/Makefile
 	cmd/zfs/Makefile
 	cmd/zinject/Makefile
