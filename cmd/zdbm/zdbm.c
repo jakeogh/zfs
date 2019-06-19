@@ -117,6 +117,8 @@ static void snprintf_blkptr_compact(char *, size_t, const blkptr_t *);
 static void mos_obj_refd(uint64_t);
 static void mos_obj_refd_multiple(uint64_t);
 
+static void zdb_dump_block_raw(void *buf, uint64_t size, int flags);
+
 /*
  * These libumem hooks provide a reasonable set of defaults for the allocator's
  * debugging facilities.
@@ -152,9 +154,10 @@ usage(void)
 	    "\t\t<poolname> <vdev>:<offset>:<size>[:<flags>]\n"
 	    "\t%s -E [-A] word0:word1:...:word15\n"
 	    "\t%s -S [-AP] [-e [-V] [-p <path> ...]] [-U <cache>] "
-	    "<poolname>\n\n",
+	    "<poolname>\n"
+	    "\t%s -Z <dataset> <object>\n\n",
 	    cmdname, cmdname, cmdname, cmdname, cmdname, cmdname, cmdname,
-	    cmdname, cmdname);
+	    cmdname, cmdname, cmdname);
 
 	(void) fprintf(stderr, "    Dataset name must include at least one "
 	    "separator character '/' or '@'\n");
@@ -186,7 +189,8 @@ usage(void)
 	(void) fprintf(stderr, "        -s report stats on zdb's I/O\n");
 	(void) fprintf(stderr, "        -S simulate dedup to measure effect\n");
 	(void) fprintf(stderr, "        -v verbose (applies to all "
-	    "others)\n\n");
+	    "others)\n");
+	(void) fprintf(stderr, "        -Z dump file contents\n\n");
 	(void) fprintf(stderr, "    Below options are intended for use "
 	    "with other options:\n");
 	(void) fprintf(stderr, "        -A ignore assertions (-A), enable "
@@ -1480,6 +1484,47 @@ print_indirect(blkptr_t *bp, const zbookmark_phys_t *zb,
 	(void) printf("%s\n", blkbuf);
 }
 
+
+static int
+dump_embedded_bp_file(blkptr_t *bp, uint64_t fsize)  //visit_indirect
+{
+	int err = 0;
+	char * buf;
+	buf = malloc(SPA_MAXBLOCKSIZE);
+	if (buf == NULL) {
+		(void) fprintf(stderr, "out of memory\n");
+		exit(1);
+	}
+
+	err = decode_embedded_bp(bp, buf, BPE_GET_LSIZE(bp));
+	if (err != 0) {
+		(void) fprintf(stderr, "decode failed: %u\n", err);
+		exit(1);
+	}
+	zdb_dump_block_raw(buf, fsize, 0);
+	free(buf);
+	return (err);
+}
+
+
+/*ARGSUSED*/
+static void
+dump_indirect_file(dnode_t *dn, uint64_t fsize)
+{
+	dnode_phys_t *dnp = dn->dn_phys;
+	int j;
+	zbookmark_phys_t czb;
+
+	SET_BOOKMARK(&czb, dmu_objset_id(dn->dn_objset),
+	    dn->dn_object, dnp->dn_nlevels - 1, 0);
+	for (j = 0; j < dnp->dn_nblkptr; j++) {
+		czb.zb_blkid = j;
+		(void) dump_embedded_bp_file(&dnp->dn_blkptr[j], fsize);
+	}
+}
+
+
+
 static int
 visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
     blkptr_t *bp, const zbookmark_phys_t *zb)
@@ -2204,6 +2249,102 @@ static object_viewer_t *object_viewer[DMU_OT_NUMTYPES + 1] = {
 	dump_unknown,		/* Unknown type, must be last	*/
 };
 
+
+static void
+dump_object_file(objset_t *os, uint64_t object, uint64_t *dnode_slots_used)
+{
+	uint64_t fsize;
+	sa_bulk_attr_t bulk[12];
+	int idx = 0;
+	sa_handle_t *hdl;
+	VERIFY3P(os, ==, sa_os);
+	if (sa_handle_get(os, object, NULL, SA_HDL_PRIVATE, &hdl)) {
+		fatal("Failed to get handle for SA znode\n");
+		//return;
+	}
+	SA_ADD_BULK_ATTR(bulk, idx, sa_attr_table[ZPL_SIZE], NULL, &fsize, 8);
+	if (sa_bulk_lookup(hdl, bulk, idx)) {
+	    (void) sa_handle_destroy(hdl);
+	    return;
+	}
+
+	dmu_buf_t *db = NULL;
+	dmu_object_info_t doi;
+	dnode_t *dn;
+	boolean_t dnode_held = B_FALSE;
+	void *bonus = NULL;
+	size_t bsize = 0;
+	char iblk[32], dblk[32], lsize[32], asize[32], fill[32], dnsize[32];
+	char bonus_size[32];
+	char aux[50];
+	int error;
+
+	/* make sure nicenum has enough space */
+	CTASSERT(sizeof (iblk) >= NN_NUMBUF_SZ);
+	CTASSERT(sizeof (dblk) >= NN_NUMBUF_SZ);
+	CTASSERT(sizeof (lsize) >= NN_NUMBUF_SZ);
+	CTASSERT(sizeof (asize) >= NN_NUMBUF_SZ);
+	CTASSERT(sizeof (bonus_size) >= NN_NUMBUF_SZ);
+
+	if (object == 0) {
+		dn = DMU_META_DNODE(os);
+		dmu_object_info_from_dnode(dn, &doi);
+	} else {
+		/*
+		 * Encrypted datasets will have sensitive bonus buffers
+		 * encrypted. Therefore we cannot hold the bonus buffer and
+		 * must hold the dnode itself instead.
+		 */
+		error = dmu_object_info(os, object, &doi);
+		if (error)
+			fatal("dmu_object_info() failed, errno %u", error);
+
+		if (os->os_encrypted &&
+		    DMU_OT_IS_ENCRYPTED(doi.doi_bonus_type)) {
+			error = dnode_hold(os, object, FTAG, &dn);
+			if (error)
+				fatal("dnode_hold() failed, errno %u", error);
+			dnode_held = B_TRUE;
+		} else {
+			error = dmu_bonus_hold(os, object, FTAG, &db);
+			if (error)
+				fatal("dmu_bonus_hold(%llu) failed, errno %u",
+				    object, error);
+			bonus = db->db_data;
+			bsize = db->db_size;
+			dn = DB_DNODE((dmu_buf_impl_t *)db);
+		}
+	}
+
+	if (dnode_slots_used)
+		*dnode_slots_used = doi.doi_dnodesize / DNODE_MIN_SIZE;
+
+	zdb_nicenum(doi.doi_metadata_block_size, iblk, sizeof (iblk));
+	zdb_nicenum(doi.doi_data_block_size, dblk, sizeof (dblk));
+	zdb_nicenum(doi.doi_max_offset, lsize, sizeof (lsize));
+	zdb_nicenum(doi.doi_physical_blocks_512 << 9, asize, sizeof (asize));
+	zdb_nicenum(doi.doi_bonus_size, bonus_size, sizeof (bonus_size));
+	zdb_nicenum(doi.doi_dnodesize, dnsize, sizeof (dnsize));
+	(void) sprintf(fill, "%6.2f", 100.0 * doi.doi_fill_count *
+	    doi.doi_data_block_size / (object == 0 ? DNODES_PER_BLOCK : 1) /
+	    doi.doi_max_offset);
+
+	//aux[0] = '\0';
+
+	ASSERT(doi.doi_type == DMU_OT_PLAIN_FILE_CONTENTS);
+	//DMU_OT_PLAIN_FILE_CONTENTS assert
+	dump_indirect_file(dn, fsize);
+
+
+	if (db != NULL)
+		dmu_buf_rele(db, FTAG);
+	if (dnode_held)
+		dnode_rele(dn, FTAG);
+}
+
+
+
+
 static void
 dump_object(objset_t *os, uint64_t object, int verbosity, int *print_header,
     uint64_t *dnode_slots_used)
@@ -2404,6 +2545,71 @@ count_ds_mos_objects(dsl_dataset_t *ds)
 
 static const char *objset_types[DMU_OST_NUMTYPES] = {
 	"NONE", "META", "ZPL", "ZVOL", "OTHER", "ANY" };
+
+
+
+static void
+dump_dir_file(objset_t *os) //dump dir
+{
+	dmu_objset_stats_t dds;
+	uint64_t object, object_count;
+	uint64_t refdbytes, usedobjs, scratch;
+	char numbuf[32];
+	char blkbuf[BP_SPRINTF_LEN + 20];
+	char osname[ZFS_MAX_DATASET_NAME_LEN];
+	const char *type = "UNKNOWN";
+	int verbosity = dump_opt['d'];
+	unsigned i;
+	int error;
+	uint64_t total_slots_used = 0;
+	uint64_t max_slot_used = 0;
+	uint64_t dnode_slots;
+
+	/* make sure nicenum has enough space */
+	CTASSERT(sizeof (numbuf) >= NN_NUMBUF_SZ);
+
+	dsl_pool_config_enter(dmu_objset_pool(os), FTAG);
+	dmu_objset_fast_stat(os, &dds);
+	dsl_pool_config_exit(dmu_objset_pool(os), FTAG);
+
+	if (dds.dds_type < DMU_OST_NUMTYPES)
+		type = objset_types[dds.dds_type];
+
+	if (dds.dds_type == DMU_OST_META) {
+		dds.dds_creation_txg = TXG_INITIAL;
+		usedobjs = BP_GET_FILL(os->os_rootbp);
+		refdbytes = dsl_dir_phys(os->os_spa->spa_dsl_pool->dp_mos_dir)->
+		    dd_used_bytes;
+	} else {
+		dmu_objset_space(os, &refdbytes, &scratch, &usedobjs, &scratch);
+	}
+
+	ASSERT3U(usedobjs, ==, BP_GET_FILL(os->os_rootbp));
+
+	zdb_nicenum(refdbytes, numbuf, sizeof (numbuf));
+
+	if (verbosity >= 4) {
+		(void) snprintf(blkbuf, sizeof (blkbuf), ", rootbp ");
+		(void) snprintf_blkptr(blkbuf + strlen(blkbuf),
+		    sizeof (blkbuf) - strlen(blkbuf), os->os_rootbp);
+	} else {
+		blkbuf[0] = '\0';
+	}
+
+	dmu_objset_name(os, osname);
+
+	if (zopt_objects != 0) {
+		for (i = 0; i < zopt_objects; i++) {
+			dump_object_file(os, zopt_object[i], NULL);
+                }
+		return;
+	}
+
+	return;
+}
+
+
+
 
 static void
 dump_dir(objset_t *os)
@@ -3223,6 +3429,36 @@ dump_label(const char *dev)
 
 static uint64_t dataset_feature_count[SPA_FEATURES];
 static uint64_t remap_deadlist_count = 0;
+
+/*ARGSUSED*/
+static int
+dump_one_dir_file(const char *dsname, void *arg) //dump_one_dir
+{
+	int error;
+	objset_t *os;
+	spa_feature_t f;
+
+	error = open_objset(dsname, DMU_OST_ANY, FTAG, &os);
+	if (error != 0)
+		return (0);
+
+	for (f = 0; f < SPA_FEATURES; f++) {
+		if (!dsl_dataset_feature_is_active(dmu_objset_ds(os), f))
+			continue;
+		ASSERT(spa_feature_table[f].fi_flags &
+		    ZFEATURE_FLAG_PER_DATASET);
+		dataset_feature_count[f]++;
+	}
+
+	if (dsl_dataset_remap_deadlist_exists(dmu_objset_ds(os))) {
+		remap_deadlist_count++;
+	}
+
+	dump_dir_file(os);
+	close_objset(os, FTAG);
+	fuid_table_destroy();
+	return (0);
+}
 
 /*ARGSUSED*/
 static int
@@ -5895,7 +6131,7 @@ main(int argc, char **argv)
 		spa_config_path = spa_config_path_env;
 
 	while ((c = getopt(argc, argv,
-	    "AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XY")) != -1) {
+	    "AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XYZ")) != -1) {
 		switch (c) {
 		case 'b':
 		case 'c':
@@ -5931,6 +6167,8 @@ main(int argc, char **argv)
 			zfs_reconstruct_indirect_combinations_max = INT_MAX;
 			zfs_deadman_enabled = 0;
 			break;
+		case 'Z':
+                        break;
 		/* NB: Sort single match options below. */
 		case 'I':
 			max_inflight = strtoull(optarg, NULL, 0);
@@ -5988,6 +6226,7 @@ main(int argc, char **argv)
 			vn_dumpdir = optarg;
 			break;
 		default:
+                        (void) fprintf(stderr, "calling usage()\n");
 			usage();
 			break;
 		}
@@ -6219,7 +6458,14 @@ main(int argc, char **argv)
 			}
 		}
 		if (os != NULL) {
-			dump_dir(os);
+			if (dump_opt['Z']) {
+				if (argc != 1)
+					usage();
+				dump_dir_file(os);
+				return (0);
+			} else {
+				dump_dir(os);
+			}
 		} else if (zopt_objects > 0 && !dump_opt['m']) {
 			dump_dir(spa->spa_meta_objset);
 		} else {
