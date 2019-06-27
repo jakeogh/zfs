@@ -108,6 +108,7 @@ uint8_t dump_opt[256];
 typedef void object_viewer_t(objset_t *, uint64_t, void *data, size_t size);
 
 uint64_t *zopt_object = NULL;
+char *dumpfile_path = NULL;
 static unsigned zopt_objects = 0;
 uint64_t max_inflight = 1000;
 static int leaked_objects = 0;
@@ -116,6 +117,18 @@ static range_tree_t *mos_refd_objs;
 static void snprintf_blkptr_compact(char *, size_t, const blkptr_t *);
 static void mos_obj_refd(uint64_t);
 static void mos_obj_refd_multiple(uint64_t);
+static void zdb_dump_block_raw(void *buf, uint64_t size, int flags);
+static void zdb_print_blkptr(blkptr_t *bp, int flags);
+
+
+#define	ZDB_FLAG_CHECKSUM	0x0001
+#define	ZDB_FLAG_DECOMPRESS	0x0002
+#define	ZDB_FLAG_BSWAP		0x0004
+#define	ZDB_FLAG_GBH		0x0008
+#define	ZDB_FLAG_INDIRECT	0x0010
+#define	ZDB_FLAG_PHYS		0x0020
+#define	ZDB_FLAG_RAW		0x0040
+#define	ZDB_FLAG_PRINT_BLKPTR	0x0080
 
 /*
  * These libumem hooks provide a reasonable set of defaults for the allocator's
@@ -152,9 +165,10 @@ usage(void)
 	    "\t\t<poolname> <vdev>:<offset>:<size>[:<flags>]\n"
 	    "\t%s -E [-A] word0:word1:...:word15\n"
 	    "\t%s -S [-AP] [-e [-V] [-p <path> ...]] [-U <cache>] "
-	    "<poolname>\n\n",
+	    "<poolname>\n"
+	    "\t%s -Z <dumpfile_path> <dataset> <object>\n\n",
 	    cmdname, cmdname, cmdname, cmdname, cmdname, cmdname, cmdname,
-	    cmdname, cmdname);
+	    cmdname, cmdname, cmdname);
 
 	(void) fprintf(stderr, "    Dataset name must include at least one "
 	    "separator character '/' or '@'\n");
@@ -218,6 +232,7 @@ usage(void)
 	    "work with dataset)\n");
 	(void) fprintf(stderr, "        -Y attempt all reconstruction "
 	    "combinations for split blocks\n");
+	(void) fprintf(stderr, "        -Z <dumpfile_path> dump file contents\n");
 	(void) fprintf(stderr, "Specify an option more than once (e.g. -bb) "
 	    "to make only that option verbose\n");
 	(void) fprintf(stderr, "Default is to dump everything non-verbosely\n");
@@ -1482,12 +1497,37 @@ print_indirect(blkptr_t *bp, const zbookmark_phys_t *zb,
 
 static int
 visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
-    blkptr_t *bp, const zbookmark_phys_t *zb)
+    blkptr_t *bp, const zbookmark_phys_t *zb, uint64_t fsize)
 {
 	int err = 0;
 
 	if (bp->blk_birth == 0)
 		return (0);
+
+	if (fsize != -1 && BP_GET_LEVEL(bp) == 0) {
+		char * buf;
+		buf = malloc(SPA_MAXBLOCKSIZE); //umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL); ?
+		if (buf == NULL) {
+			(void) fprintf(stderr, "out of memory\n");
+			exit(1);
+		}
+
+		if (BP_IS_EMBEDDED(bp)) {
+			err = decode_embedded_bp(bp, buf, BPE_GET_LSIZE(bp));
+			if (err != 0) {
+				(void) fprintf(stderr, "decode failed: %u\n", err);
+				exit(1);
+			}
+		} // right here, there needs to be a else and a call to zdb_read_block() to fill buf
+                  // unfortunatly, zdb_read_block() cant accept an arg to specify the compression alg
+                  // so that should get fixed first. For embedded BP's this is already taken care of
+                  // in module/zfs/blkptr.c decode_embedded_bp() which checks BP_GET_COMPRESS(bp)
+		(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp));
+		zdb_print_blkptr(bp, 0);
+		zdb_dump_block_raw(buf, fsize, 0);  //boken for non-embedded block pointers, buf is still all null.
+		free(buf);
+		return (err);
+	}
 
 	print_indirect(bp, zb, dnp);
 
@@ -1513,7 +1553,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			SET_BOOKMARK(&czb, zb->zb_objset, zb->zb_object,
 			    zb->zb_level - 1,
 			    zb->zb_blkid * epb + i);
-			err = visit_indirect(spa, dnp, cbp, &czb);
+			err = visit_indirect(spa, dnp, cbp, &czb, fsize);
 			if (err)
 				break;
 			fill += BP_GET_FILL(cbp);
@@ -1528,20 +1568,21 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 
 /*ARGSUSED*/
 static void
-dump_indirect(dnode_t *dn)
+dump_indirect(dnode_t *dn, uint64_t fsize)
 {
 	dnode_phys_t *dnp = dn->dn_phys;
 	int j;
 	zbookmark_phys_t czb;
 
-	(void) printf("Indirect blocks:\n");
+	if (fsize == -1)
+		(void) printf("Indirect blocks:\n");
 
 	SET_BOOKMARK(&czb, dmu_objset_id(dn->dn_objset),
 	    dn->dn_object, dnp->dn_nlevels - 1, 0);
 	for (j = 0; j < dnp->dn_nblkptr; j++) {
 		czb.zb_blkid = j;
 		(void) visit_indirect(dmu_objset_spa(dn->dn_objset), dnp,
-		    &dnp->dn_blkptr[j], &czb);
+		    &dnp->dn_blkptr[j], &czb, fsize);
 	}
 
 	(void) printf("\n");
@@ -2208,6 +2249,23 @@ static void
 dump_object(objset_t *os, uint64_t object, int verbosity, int *print_header,
     uint64_t *dnode_slots_used)
 {
+	uint64_t fsize;
+
+	if (dumpfile_path) {
+		sa_bulk_attr_t bulk[12];   //TODO
+		int idx = 0;
+		sa_handle_t *hdl;
+		VERIFY3P(os, ==, sa_os);  //TODO necessary?
+		if (sa_handle_get(os, object, NULL, SA_HDL_PRIVATE, &hdl))
+			fatal("Failed to get handle for SA znode\n");
+		SA_ADD_BULK_ATTR(bulk, idx, sa_attr_table[ZPL_SIZE], NULL,
+		    &fsize, 8);
+		if (sa_bulk_lookup(hdl, bulk, idx)) {
+			(void) sa_handle_destroy(hdl);  //TODO fatal()?
+			return;
+		}
+	}
+
 	dmu_buf_t *db = NULL;
 	dmu_object_info_t doi;
 	dnode_t *dn;
@@ -2329,7 +2387,7 @@ dump_object(objset_t *os, uint64_t object, int verbosity, int *print_header,
 	}
 
 	if (verbosity >= 5)
-		dump_indirect(dn);
+		dump_indirect(dn, -1);
 
 	if (verbosity >= 5) {
 		/*
@@ -2364,6 +2422,11 @@ dump_object(objset_t *os, uint64_t object, int verbosity, int *print_header,
 				break;
 			start = end;
 		}
+	}
+
+	if (dumpfile_path) {
+		if (dn->dn_type == DMU_OT_PLAIN_FILE_CONTENTS)
+			dump_indirect(dn, fsize);
 	}
 
 	if (db != NULL)
@@ -5440,15 +5503,6 @@ dump_zpool(spa_t *spa)
 	}
 }
 
-#define	ZDB_FLAG_CHECKSUM	0x0001
-#define	ZDB_FLAG_DECOMPRESS	0x0002
-#define	ZDB_FLAG_BSWAP		0x0004
-#define	ZDB_FLAG_GBH		0x0008
-#define	ZDB_FLAG_INDIRECT	0x0010
-#define	ZDB_FLAG_PHYS		0x0020
-#define	ZDB_FLAG_RAW		0x0040
-#define	ZDB_FLAG_PRINT_BLKPTR	0x0080
-
 static int flagbits[256];
 
 static void
@@ -5481,9 +5535,19 @@ zdb_dump_gbh(void *buf, int flags)
 static void
 zdb_dump_block_raw(void *buf, uint64_t size, int flags)
 {
+	int dumpfile_fd = -1;
 	if (flags & ZDB_FLAG_BSWAP)
 		byteswap_uint64_array(buf, size);
-	VERIFY(write(fileno(stdout), buf, size) == size);
+	if (dumpfile_path != NULL) {
+		dumpfile_fd = open64(dumpfile_path, O_CREAT | O_EXCL | O_WRONLY, 0666);
+		if (dumpfile_fd == -1) {
+			fatal("failed to write ’%s’: %s", dumpfile_path, strerror(errno));
+		}
+		VERIFY(write(dumpfile_fd, buf, size) == size);
+		close(dumpfile_fd);
+	} else {
+		VERIFY(write(fileno(stdout), buf, size) == size);
+	}
 }
 
 static void
@@ -5895,7 +5959,7 @@ main(int argc, char **argv)
 		spa_config_path = spa_config_path_env;
 
 	while ((c = getopt(argc, argv,
-	    "AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XY")) != -1) {
+	    "AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XYZ:")) != -1) {
 		switch (c) {
 		case 'b':
 		case 'c':
@@ -5986,6 +6050,15 @@ main(int argc, char **argv)
 			break;
 		case 'x':
 			vn_dumpdir = optarg;
+			break;
+		case 'Z':
+			dumpfile_path = optarg;
+			if (dumpfile_path[0] != '/') {
+				(void) fprintf(stderr,
+				    "output file must be an absolute path "
+				    "(i.e. start with a slash)\n");
+				usage();
+			}
 			break;
 		default:
 			usage();
@@ -6219,7 +6292,12 @@ main(int argc, char **argv)
 			}
 		}
 		if (os != NULL) {
+			if (dumpfile_path && argc != 1)
+				usage();
 			dump_dir(os);
+			if (dumpfile_path) {
+				return (0);
+			}
 		} else if (zopt_objects > 0 && !dump_opt['m']) {
 			dump_dir(spa->spa_meta_objset);
 		} else {
