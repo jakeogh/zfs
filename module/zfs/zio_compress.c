@@ -139,6 +139,7 @@ int
 zio_decompress_data_buf(enum zio_compress c, void *src, void *dst,
     size_t s_len, size_t d_len)
 {
+	(void) fprintf(stderr, "zio_decompress_data_buf c: %d\n", c);
 	zio_compress_info_t *ci = &zio_compress_table[c];
 	if ((uint_t)c >= ZIO_COMPRESS_FUNCTIONS || ci->ci_decompress == NULL)
 		return (SET_ERROR(EINVAL));
@@ -150,8 +151,10 @@ int
 zio_decompress_data(enum zio_compress c, abd_t *src, void *dst,
     size_t s_len, size_t d_len)
 {
+	(void) fprintf(stderr, "zio_decompress_data &src: %p, c: %d\n", &src, c);
 	void *tmp = abd_borrow_buf_copy(src, s_len);
 	int ret = zio_decompress_data_buf(c, tmp, dst, s_len, d_len);
+	(void) fprintf(stderr, "zio_decompress_data ret: %d\n", ret);
 	abd_return_buf(src, tmp, s_len);
 
 	/*

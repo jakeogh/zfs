@@ -86,6 +86,7 @@ gzip_compress(void *s_start, void *d_start, size_t s_len, size_t d_len, int n)
 int
 gzip_decompress(void *s_start, void *d_start, size_t s_len, size_t d_len, int n)
 {
+	(void) fprintf(stderr, "gzip_decompress() s_len: %ld d_len: %ld, n: %d\n", s_len, d_len, n);
 	zlen_t dstlen = d_len;
 
 	ASSERT(d_len >= s_len);

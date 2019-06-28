@@ -1024,6 +1024,10 @@ random_get_bytes_common(uint8_t *ptr, size_t len, int fd)
 
 	while (resid != 0) {
 		bytes = read(fd, ptr, resid);
+                if (bytes > 8) {
+                    (void) fprintf(stderr, "random_get_bytes_common() bytes: %ld\n", bytes);
+                    (void) fprintf(stderr, "ptr[0]: %d\n", ptr[0]);
+                }
 		ASSERT3S(bytes, >=, 0);
 		ptr += bytes;
 		resid -= bytes;

@@ -32,6 +32,7 @@
  */
 #include <sys/types.h>
 #include <sys/sysmacros.h>
+#include <stdio.h>
 
 size_t
 zle_compress(void *s_start, void *d_start, size_t s_len, size_t d_len, int n)
@@ -66,6 +67,7 @@ zle_compress(void *s_start, void *d_start, size_t s_len, size_t d_len, int n)
 int
 zle_decompress(void *s_start, void *d_start, size_t s_len, size_t d_len, int n)
 {
+	(void) fprintf(stderr, "zle_decompress() s_len: %ld d_len: %ld, n: %d\n", s_len, d_len, n);
 	uchar_t *src = s_start;
 	uchar_t *dst = d_start;
 	uchar_t *s_end = src + s_len;
@@ -74,11 +76,13 @@ zle_decompress(void *s_start, void *d_start, size_t s_len, size_t d_len, int n)
 	while (src < s_end && dst < d_end) {
 		int len = 1 + *src++;
 		if (len <= n) {
+			(void) fprintf(stderr, "len <= n len: %d\n", len);
 			if (src + len > s_end || dst + len > d_end)
 				return (-1);
 			while (len-- != 0)
 				*dst++ = *src++;
 		} else {
+			(void) fprintf(stderr, "len > n len: %d\n", len);
 			len -= n;
 			if (dst + len > d_end)
 				return (-1);
@@ -86,5 +90,10 @@ zle_decompress(void *s_start, void *d_start, size_t s_len, size_t d_len, int n)
 				*dst++ = 0;
 		}
 	}
+	(void) fprintf(stderr, "zle_decompress()  dst hhn: %hhn d_end hhn: %hhn\n", dst, d_end);
+	(void) fprintf(stderr, "zle_decompress()  dst hhx: %hhx d_end hhx: %hhx\n", dst, d_end);
+	(void) fprintf(stderr, "zle_decompress()  dst d: %d     d_end d: %d\n",         dst, d_end);
+	(void) fprintf(stderr, "zle_decompress() *dst d: %d    *d_end d: %d\n",       *dst, *d_end);
+	(void) fprintf(stderr, "zle_decompress() *dst x: %x    *d_end x: %x\n",       *dst, *d_end);
 	return (dst == d_end ? 0 : -1);
 }

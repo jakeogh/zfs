@@ -5756,6 +5756,7 @@ zdb_read_block(char *thing, spa_t *spa)
 		 * we are not stuck.  On the other hand, printing progress
 		 * info gets old after a while.  What to do?
 		 */
+                (void) fprintf(stderr, "SPA_MINBLOCKSIZE: %lld\n", SPA_MINBLOCKSIZE);
 		for (lsize = psize + SPA_MINBLOCKSIZE;
 		    lsize <= SPA_MAXBLOCKSIZE; lsize += SPA_MINBLOCKSIZE) {
 			for (c = 0; c < ZIO_COMPRESS_FUNCTIONS; c++) {
@@ -5763,14 +5764,16 @@ zdb_read_block(char *thing, spa_t *spa)
 				 * ZLE can easily decompress non zle stream.
 				 * So have an option to disable it.
 				 */
-				if (c == ZIO_COMPRESS_ZLE &&
-				    getenv("ZDB_NO_ZLE"))
+				if (c == ZIO_COMPRESS_ZLE && getenv("ZDB_NO_ZLE")) {
+					(void) fprintf(stderr, "skipped ZLE because ZDB_NO_ZLE is set\n");
 					continue;
+				}
 
 				(void) fprintf(stderr,
-				    "Trying %05llx -> %05llx (%s)\n",
-				    (u_longlong_t)psize, (u_longlong_t)lsize,
-				    zio_compress_table[c].ci_name);
+				    "Trying %05llxP(%llu) ->(%llu)-> %05llxL(%llu) (%s) c: %d\n",
+				    (u_longlong_t)psize, (u_longlong_t)psize, (u_longlong_t)lsize-(u_longlong_t)psize,
+                                    (u_longlong_t)lsize, (u_longlong_t)lsize,
+				    zio_compress_table[c].ci_name, c);
 
 				/*
 				 * We randomize lbuf2, and decompress to both
@@ -5778,16 +5781,31 @@ zdb_read_block(char *thing, spa_t *spa)
 				 * decompression fill exactly to lsize.
 				 */
 				VERIFY0(random_get_pseudo_bytes(lbuf2, lsize));
+                                (void) fprintf(stderr, "zdb_read_block() psize ld: %ld, lsize ld: %ld\n", psize, lsize);
+                                //psize lld: 40960, lsize lld: 51200
 
+				if                 (zio_decompress_data(c, pabd, lbuf, psize, lsize) == 0)
+					if         (zio_decompress_data(c, pabd, lbuf2, psize, lsize) == 0)
+						if (bcmp(lbuf, lbuf2, lsize) == 0) {
+							(void) fprintf(stderr, "bcmp returned != 0\n");
+							break;
+				}
+
+/*
 				if (zio_decompress_data(c, pabd,
 				    lbuf, psize, lsize) == 0 &&
 				    zio_decompress_data(c, pabd,
 				    lbuf2, psize, lsize) == 0 &&
-				    bcmp(lbuf, lbuf2, lsize) == 0)
+				    bcmp(lbuf, lbuf2, lsize) == 0) {
+					(void) fprintf(stderr, "bcmp returned != 0\n");
 					break;
+				}
+*/
 			}
-			if (c != ZIO_COMPRESS_FUNCTIONS)
+			if (c != ZIO_COMPRESS_FUNCTIONS) {
+				(void) fprintf(stderr, "c != ZIO_COMPRESS_FUNCTIONS c: %d\n", c);
 				break;
+				}
 		}
 		umem_free(lbuf2, SPA_MAXBLOCKSIZE);
 
