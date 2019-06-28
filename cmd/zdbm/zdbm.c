@@ -117,6 +117,8 @@ static void snprintf_blkptr_compact(char *, size_t, const blkptr_t *);
 static void mos_obj_refd(uint64_t);
 static void mos_obj_refd_multiple(uint64_t);
 
+int compress_alg_index = ZIO_COMPRESS_FUNCTIONS;
+
 /*
  * These libumem hooks provide a reasonable set of defaults for the allocator's
  * debugging facilities.
@@ -148,7 +150,7 @@ usage(void)
 	    "\t%s -m [-AFLPX] [-e [-V] [-p <path> ...]] [-t <txg>] "
 	    "[-U <cache>]\n\t\t<poolname> [<vdev> [<metaslab> ...]]\n"
 	    "\t%s -O <dataset> <path>\n"
-	    "\t%s -R [-A] [-e [-V] [-p <path> ...]] [-U <cache>]\n"
+	    "\t%s -R [-a <compress_alg>] [-A] [-e [-V] [-p <path> ...]] [-U <cache>]\n"
 	    "\t\t<poolname> <vdev>:<offset>:<size>[:<flags>]\n"
 	    "\t%s -E [-A] word0:word1:...:word15\n"
 	    "\t%s -S [-AP] [-e [-V] [-p <path> ...]] [-U <cache>] "
@@ -189,6 +191,8 @@ usage(void)
 	    "others)\n\n");
 	(void) fprintf(stderr, "    Below options are intended for use "
 	    "with other options:\n");
+	(void) fprintf(stderr, "        -a <compress_alg> use compresson "
+	    "algorithm instead of attempting to guess\n");
 	(void) fprintf(stderr, "        -A ignore assertions (-A), enable "
 	    "panic recovery (-AA) or both (-AAA)\n");
 	(void) fprintf(stderr, "        -e pool is exported/destroyed/"
@@ -5603,6 +5607,7 @@ name:
 static void
 zdb_read_block(char *thing, spa_t *spa)
 {
+	(void) fprintf(stderr, "compress_alg_index: %d\n", compress_alg_index);
 	blkptr_t blk, *bp = &blk;
 	dva_t *dva = bp->blk_dva;
 	int flags = 0;
@@ -5764,8 +5769,11 @@ zdb_read_block(char *thing, spa_t *spa)
 				 * So have an option to disable it.
 				 */
 				if (c == ZIO_COMPRESS_ZLE &&
-				    getenv("ZDB_NO_ZLE"))
+				    getenv("ZDB_NO_ZLE") && compress_alg_index != ZIO_COMPRESS_FUNCTIONS)
 					continue;
+
+				if (compress_alg_index != ZIO_COMPRESS_FUNCTIONS)
+					c = compress_alg_index;
 
 				(void) fprintf(stderr,
 				    "Trying %05llx -> %05llx (%s)\n",
@@ -5863,6 +5871,8 @@ int
 main(int argc, char **argv)
 {
 	int c;
+	int i;
+	char *compress_alg = NULL;
 	struct rlimit rl = { 1024, 1024 };
 	spa_t *spa = NULL;
 	objset_t *os = NULL;
@@ -5895,7 +5905,7 @@ main(int argc, char **argv)
 		spa_config_path = spa_config_path_env;
 
 	while ((c = getopt(argc, argv,
-	    "AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XY")) != -1) {
+	    "a:AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XY")) != -1) {
 		switch (c) {
 		case 'b':
 		case 'c':
@@ -5932,6 +5942,21 @@ main(int argc, char **argv)
 			zfs_deadman_enabled = 0;
 			break;
 		/* NB: Sort single match options below. */
+		case 'a':
+			compress_alg = optarg;
+			for (i = 0; i < ZIO_COMPRESS_FUNCTIONS; i++) {
+				if (strcmp(compress_alg,
+					zio_compress_table[i].ci_name) == 0) {
+					compress_alg_index = i;
+					break;
+				}
+			}
+			if (i == ZIO_COMPRESS_FUNCTIONS) {
+				(void) fprintf(stderr, "unknown compression "
+					"algorithm: ’%s’\n", compress_alg);
+				usage();
+			}
+			break;
 		case 'I':
 			max_inflight = strtoull(optarg, NULL, 0);
 			if (max_inflight == 0) {
