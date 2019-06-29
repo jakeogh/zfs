@@ -6149,6 +6149,9 @@ main(int argc, char **argv)
 	if (argc < 2 && dump_opt['R'])
 		usage();
 
+	if (dump_opt['Z'] && dump_opt['R'])
+		usage();
+
 	if (dump_opt['E']) {
 		if (argc != 1)
 			usage();
