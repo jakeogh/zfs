@@ -1522,10 +1522,18 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 				(void) fprintf(stderr, "decode failed: %u\n", err);
 				exit(1);
 			}
-		} // right here, there needs to be a else and a call to zdb_read_block() to fill buf
+		} else { // right here, there needs to be a else and a call to zdb_read_block() to fill buf
                   // unfortunatly, zdb_read_block() cant accept an arg to specify the compression alg
                   // so that should get fixed first. For embedded BP's this is already taken care of
                   // in module/zfs/blkptr.c decode_embedded_bp() which checks BP_GET_COMPRESS(bp)
+		//zdb_read_block(, spa, display_block, BP_GET_LSIZE(bp));
+                ;
+//"DVA[%d]=<%llu:%llx:%llx>%c"
+//(u_longlong_t)DVA_GET_VDEV(dva)
+//(u_longlong_t)DVA_GET_OFFSET(dva)
+//(u_longlong_t)DVA_GET_ASIZE(dva)
+
+		}
 		(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp));
 		zdb_print_blkptr(bp, 0);
 		zdb_dump_block_raw(buf, fsize, 0);  //boken for non-embedded block pointers, buf is still all null.
@@ -5663,11 +5671,13 @@ zdb_display_block(char *thing, void *buf, uint64_t size, uint64_t blkptr_offset,
 		zdb_dump_block(thing, buf, size, flags);
 }
 
+
+
 /*
  * Read a block from a pool and print it out.  The syntax of the
  * block descriptor is:
  *
- *	pool:vdev_specifier:offset:size[:flags]
+ *	pool:vdev_specifier:offset:size[:flags]  //wrong, pool: is an argv
  *
  *	pool           - The name of the pool you wish to read from
  *	vdev_specifier - Which vdev (see comment for zdb_vdev_lookup)
@@ -5685,30 +5695,23 @@ zdb_display_block(char *thing, void *buf, uint64_t size, uint64_t blkptr_offset,
  *
  *              * = not yet implemented
  */
-static void
-zdb_read_block(char *thing, spa_t *spa)
-{
-	(void) fprintf(stderr, "compress_alg_index: %d\n", compress_alg_index);
-	blkptr_t blk, *bp = &blk;
-	dva_t *dva = bp->blk_dva;
-	int flags = 0;
-	uint64_t offset = 0, size = 0, psize = 0, lsize = 0, blkptr_offset = 0;
-	zio_t *zio;
-	vdev_t *vd;
-	abd_t *pabd;
-	void *lbuf, *buf;
-	const char *s, *vdev;
-	char *p, *dup, *flagstr;
-	int i, error;
-	boolean_t borrowed = B_FALSE;
 
+static void
+parse_block_descriptor(char *thing, char **vdev, uint64_t *offset, uint64_t *size, uint64_t *blkptr_offset, int *flags)
+{
+	//(void) fprintf(stderr, "parse_block_descriptor() thing: %s\n", thing);
+	char *p, *dup, *flagstr;
+	int i;
+	const char *s;
+
+	*vdev = calloc(1, PATH_MAX * sizeof(char));
 	dup = strdup(thing);
 	s = strtok(dup, ":");
-	vdev = s ? s : "";
+	strlcpy(*vdev, s ? s : "", PATH_MAX);
 	s = strtok(NULL, ":");
-	offset = strtoull(s ? s : "", NULL, 16);
+	*offset = strtoull(s ? s : "", NULL, 16);
 	s = strtok(NULL, ":");
-	size = strtoull(s ? s : "", NULL, 16);
+	*size = strtoull(s ? s : "", NULL, 16);
 	s = strtok(NULL, ":");
 	if (s)
 		flagstr = strdup(s);
@@ -5716,17 +5719,17 @@ zdb_read_block(char *thing, spa_t *spa)
 		flagstr = strdup("");
 
 	s = NULL;
-	if (size == 0)
+	if (*size == 0)
 		s = "size must not be zero";
-	if (!IS_P2ALIGNED(size, DEV_BSIZE))
+	if (!IS_P2ALIGNED(*size, DEV_BSIZE))
 		s = "size must be a multiple of sector size";
-	if (!IS_P2ALIGNED(offset, DEV_BSIZE))
+	if (!IS_P2ALIGNED(*offset, DEV_BSIZE))
 		s = "offset must be a multiple of sector size";
 	if (s) {
 		(void) printf("Invalid block specifier: %s  - %s\n", thing, s);
 		free(flagstr);
 		free(dup);
-		return;
+		return;  //should return -1 and exit 1
 	}
 
 	for (s = strtok(flagstr, ":"); s; s = strtok(NULL, ":")) {
@@ -5738,7 +5741,7 @@ zdb_read_block(char *thing, spa_t *spa)
 				    flagstr[i]);
 				continue;
 			}
-			flags |= bit;
+			*flags |= bit;
 
 			/* If it's not something with an argument, keep going */
 			if ((bit & (ZDB_FLAG_CHECKSUM |
@@ -5747,7 +5750,7 @@ zdb_read_block(char *thing, spa_t *spa)
 
 			p = &flagstr[i + 1];
 			if (bit == ZDB_FLAG_PRINT_BLKPTR) {
-				blkptr_offset = strtoull(p, &p, 16);
+				*blkptr_offset = strtoull(p, &p, 16);
 				i = p - &flagstr[i + 1];
 			}
 			if (*p != ':' && *p != '\0') {
@@ -5759,13 +5762,35 @@ zdb_read_block(char *thing, spa_t *spa)
 		}
 	}
 	free(flagstr);
+	free(dup);
+}
+
+static void
+zdb_read_block(char *thing, spa_t *spa, boolean_t display_block, uint64_t bp_lsize)
+{
+	(void) fprintf(stderr, "compress_alg_index: %d\n", compress_alg_index);
+	(void) fprintf(stderr, "thing: %s\n", thing);
+	blkptr_t blk, *bp = &blk;
+	dva_t *dva = bp->blk_dva;
+	int flags = 0;
+	uint64_t offset = 0, size = 0, psize = 0, lsize = 0, blkptr_offset = 0;
+	zio_t *zio;
+	vdev_t *vd;
+	abd_t *pabd;
+	void *lbuf, *buf;
+	char *vdev;
+	int error;
+	boolean_t borrowed = B_FALSE;
+
+	parse_block_descriptor(thing, &vdev, &offset, &size, &blkptr_offset, &flags);
 
 	vd = zdb_vdev_lookup(spa->spa_root_vdev, vdev);
 	if (vd == NULL) {
 		(void) printf("***Invalid vdev: %s\n", vdev);
-		free(dup);
+		free(vdev);
 		return;
 	} else {
+		free(vdev);
 		if (vd->vdev_path)
 			(void) fprintf(stderr, "Found vdev: %s\n",
 			    vd->vdev_path);
@@ -5844,6 +5869,13 @@ zdb_read_block(char *thing, spa_t *spa)
 		 */
 		for (lsize = psize + SPA_MINBLOCKSIZE;
 		    lsize <= SPA_MAXBLOCKSIZE; lsize += SPA_MINBLOCKSIZE) {
+			if (bp_lsize != -1) {
+				if (bp_lsize <= 0) {
+					(void) fprintf(stderr, "error: bp_lsize must be > 0\n");
+					goto out;
+					}
+				lsize = bp_lsize;
+				}
 			for (c = 0; c < ZIO_COMPRESS_FUNCTIONS; c++) {
 				/*
 				 * ZLE can easily decompress non zle stream.
@@ -5892,7 +5924,8 @@ zdb_read_block(char *thing, spa_t *spa)
 		borrowed = B_TRUE;
 	}
 
-	zdb_display_block(thing, buf, size, blkptr_offset, flags);
+	if (display_block)
+		zdb_display_block(thing, buf, size, blkptr_offset, flags);
 
 	if (borrowed)
 		abd_return_buf_copy(pabd, buf, size);
@@ -5900,7 +5933,7 @@ zdb_read_block(char *thing, spa_t *spa)
 out:
 	abd_free(pabd);
 	umem_free(lbuf, SPA_MAXBLOCKSIZE);
-	free(dup);
+	//free(dup);
 }
 
 static void
@@ -5958,6 +5991,7 @@ main(int argc, char **argv)
 	int rewind = ZPOOL_NEVER_REWIND;
 	char *spa_config_path_env;
 	boolean_t target_is_spa = B_TRUE;
+	boolean_t display_block = B_FALSE;
 	nvlist_t *cfg = NULL;
 
 	(void) setrlimit(RLIMIT_NOFILE, &rl);
@@ -5991,6 +6025,7 @@ main(int argc, char **argv)
 		case 'M':
 		case 'O':
 		case 'R':
+			display_block = B_TRUE;
 		case 's':
 		case 'S':
 		case 'u':
@@ -6149,7 +6184,7 @@ main(int argc, char **argv)
 	if (argc < 2 && dump_opt['R'])
 		usage();
 
-	if (dump_opt['Z'] && dump_opt['R'])
+	if (dumpfile_path && dump_opt['R'])
 		usage();
 
 	if (dump_opt['E']) {
@@ -6347,8 +6382,10 @@ main(int argc, char **argv)
 		flagbits['p'] = ZDB_FLAG_PHYS;
 		flagbits['r'] = ZDB_FLAG_RAW;
 
-		for (int i = 0; i < argc; i++)
-			zdb_read_block(argv[i], spa);
+		for (int i = 0; i < argc; i++) {
+			(void) fprintf(stderr, "argv[i]: %s display_block: %d\n", argv[i], display_block);
+			zdb_read_block(argv[i], spa, display_block, -1);
+		}
 	}
 
 	if (dump_opt['k']) {
