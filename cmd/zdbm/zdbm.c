@@ -5975,11 +5975,7 @@ main(int argc, char **argv)
 		spa_config_path = spa_config_path_env;
 
 	while ((c = getopt(argc, argv,
-<<<<<<< HEAD
-	    "AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XYZ:")) != -1) {
-=======
-	    "a:AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XY")) != -1) {
->>>>>>> zdb-read-block-compress-alg-arg
+	    "a:AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XYZ:")) != -1) {
 		switch (c) {
 		case 'b':
 		case 'c':
