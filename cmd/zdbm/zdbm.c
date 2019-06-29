@@ -5699,7 +5699,8 @@ zdb_display_block(char *thing, void *buf, uint64_t size, uint64_t blkptr_offset,
 static void
 parse_block_descriptor(char *thing, char **vdev, uint64_t *offset, uint64_t *size, uint64_t *blkptr_offset, int *flags)
 {
-	//(void) fprintf(stderr, "parse_block_descriptor() thing: %s\n", thing);
+	(void) fprintf(stderr, "parse_block_descriptor() thing: %s\n", thing);
+	(void) fprintf(stderr, "parse_block_descriptor() *size: %ld\n", *size);
 	char *p, *dup, *flagstr;
 	int i;
 	const char *s;
@@ -5712,6 +5713,7 @@ parse_block_descriptor(char *thing, char **vdev, uint64_t *offset, uint64_t *siz
 	*offset = strtoull(s ? s : "", NULL, 16);
 	s = strtok(NULL, ":");
 	*size = strtoull(s ? s : "", NULL, 16);
+	(void) fprintf(stderr, "parse_block_descriptor() *size: %ld\n", *size);
 	s = strtok(NULL, ":");
 	if (s)
 		flagstr = strdup(s);
@@ -5766,6 +5768,88 @@ parse_block_descriptor(char *thing, char **vdev, uint64_t *offset, uint64_t *siz
 }
 
 static void
+zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd, uint64_t psize, uint64_t bp_lsize, uint64_t *size)
+{
+	uint64_t lsize;
+	(void) fprintf(stderr, "psize: %ld\n", psize);
+	(void) fprintf(stderr, "bp_lsize: %ld\n", bp_lsize);
+	(void) fprintf(stderr, "zdb_decompress_block() *size: %ld\n", *size);
+	/*
+	 * We don't know how the data was compressed, so just try
+	 * every decompress function at every inflated blocksize.
+	 */
+	enum zio_compress c;
+	void *lbuf2 = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
+	//*buf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
+
+	/*
+	 * XXX - On the one hand, with SPA_MAXBLOCKSIZE at 16MB,
+	 * this could take a while and we should let the user know
+	 * we are not stuck.  On the other hand, printing progress
+	 * info gets old after a while.  What to do?
+	 */
+	for (lsize = psize + SPA_MINBLOCKSIZE;
+	    lsize <= SPA_MAXBLOCKSIZE; lsize += SPA_MINBLOCKSIZE) {
+		if (bp_lsize != -1) {
+			if (bp_lsize <= 0) {
+				(void) fprintf(stderr, "error: bp_lsize must be > 0\n");
+				goto out;
+				}
+			lsize = bp_lsize;
+			}
+		for (c = 0; c < ZIO_COMPRESS_FUNCTIONS; c++) {
+			/*
+			 * ZLE can easily decompress non zle stream.
+			 * So have an option to disable it.
+			 */
+			if (c == ZIO_COMPRESS_ZLE &&
+			    getenv("ZDB_NO_ZLE") && compress_alg_index != ZIO_COMPRESS_FUNCTIONS)
+				continue;
+
+			if (compress_alg_index != ZIO_COMPRESS_FUNCTIONS)
+				c = compress_alg_index;
+
+			(void) fprintf(stderr,
+			    "Trying %05llx -> %05llx (%s)\n",
+			    (u_longlong_t)psize, (u_longlong_t)lsize,
+			    zio_compress_table[c].ci_name);
+
+			/*
+			 * We randomize lbuf2, and decompress to both
+			 * lbuf and lbuf2. This way, we will know if
+			 * decompression fill exactly to lsize.
+			 */
+			VERIFY0(random_get_pseudo_bytes(lbuf2, lsize));
+
+			if (zio_decompress_data(c, pabd,
+			    lbuf, psize, lsize) == 0 &&
+			    zio_decompress_data(c, pabd,
+			    lbuf2, psize, lsize) == 0 &&
+			    bcmp(lbuf, lbuf2, lsize) == 0)
+				break;
+		}
+		if (c != ZIO_COMPRESS_FUNCTIONS)
+			break;
+	}
+	umem_free(lbuf2, SPA_MAXBLOCKSIZE);
+
+	if (lsize > SPA_MAXBLOCKSIZE) {
+		(void) printf("Decompress of %s failed\n", thing);
+		goto out;
+	}
+	*buf = lbuf;
+	*size = lsize;
+	return;
+
+out:
+	abd_free(pabd);
+	umem_free(lbuf, SPA_MAXBLOCKSIZE);
+
+}
+
+
+
+static void
 zdb_read_block(char *thing, spa_t *spa, boolean_t display_block, uint64_t bp_lsize)
 {
 	(void) fprintf(stderr, "compress_alg_index: %d\n", compress_alg_index);
@@ -5783,6 +5867,7 @@ zdb_read_block(char *thing, spa_t *spa, boolean_t display_block, uint64_t bp_lsi
 	boolean_t borrowed = B_FALSE;
 
 	parse_block_descriptor(thing, &vdev, &offset, &size, &blkptr_offset, &flags);
+	(void) fprintf(stderr, "zdb_read_block() (after parse_block_descriptor()) size: %ld\n", size);
 
 	vd = zdb_vdev_lookup(spa->spa_root_vdev, vdev);
 	if (vd == NULL) {
@@ -5854,70 +5939,7 @@ zdb_read_block(char *thing, spa_t *spa, boolean_t display_block, uint64_t bp_lsi
 	}
 
 	if (flags & ZDB_FLAG_DECOMPRESS) {
-		/*
-		 * We don't know how the data was compressed, so just try
-		 * every decompress function at every inflated blocksize.
-		 */
-		enum zio_compress c;
-		void *lbuf2 = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
-
-		/*
-		 * XXX - On the one hand, with SPA_MAXBLOCKSIZE at 16MB,
-		 * this could take a while and we should let the user know
-		 * we are not stuck.  On the other hand, printing progress
-		 * info gets old after a while.  What to do?
-		 */
-		for (lsize = psize + SPA_MINBLOCKSIZE;
-		    lsize <= SPA_MAXBLOCKSIZE; lsize += SPA_MINBLOCKSIZE) {
-			if (bp_lsize != -1) {
-				if (bp_lsize <= 0) {
-					(void) fprintf(stderr, "error: bp_lsize must be > 0\n");
-					goto out;
-					}
-				lsize = bp_lsize;
-				}
-			for (c = 0; c < ZIO_COMPRESS_FUNCTIONS; c++) {
-				/*
-				 * ZLE can easily decompress non zle stream.
-				 * So have an option to disable it.
-				 */
-				if (c == ZIO_COMPRESS_ZLE &&
-				    getenv("ZDB_NO_ZLE") && compress_alg_index != ZIO_COMPRESS_FUNCTIONS)
-					continue;
-
-				if (compress_alg_index != ZIO_COMPRESS_FUNCTIONS)
-					c = compress_alg_index;
-
-				(void) fprintf(stderr,
-				    "Trying %05llx -> %05llx (%s)\n",
-				    (u_longlong_t)psize, (u_longlong_t)lsize,
-				    zio_compress_table[c].ci_name);
-
-				/*
-				 * We randomize lbuf2, and decompress to both
-				 * lbuf and lbuf2. This way, we will know if
-				 * decompression fill exactly to lsize.
-				 */
-				VERIFY0(random_get_pseudo_bytes(lbuf2, lsize));
-
-				if (zio_decompress_data(c, pabd,
-				    lbuf, psize, lsize) == 0 &&
-				    zio_decompress_data(c, pabd,
-				    lbuf2, psize, lsize) == 0 &&
-				    bcmp(lbuf, lbuf2, lsize) == 0)
-					break;
-			}
-			if (c != ZIO_COMPRESS_FUNCTIONS)
-				break;
-		}
-		umem_free(lbuf2, SPA_MAXBLOCKSIZE);
-
-		if (lsize > SPA_MAXBLOCKSIZE) {
-			(void) printf("Decompress of %s failed\n", thing);
-			goto out;
-		}
-		buf = lbuf;
-		size = lsize;
+		zdb_decompress_block(thing, &buf, lbuf, pabd, psize, bp_lsize, &size);
 	} else {
 		size = psize;
 		buf = abd_borrow_buf_copy(pabd, size);
