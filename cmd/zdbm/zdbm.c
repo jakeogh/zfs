@@ -5578,6 +5578,23 @@ name:
 	return (NULL);
 }
 
+static void
+zdb_display_block(char *thing, void *buf, uint64_t size, uint64_t blkptr_offset, int flags)
+{
+	if (flags & ZDB_FLAG_PRINT_BLKPTR)
+		zdb_print_blkptr((blkptr_t *)(void *)
+		    ((uintptr_t)buf + (uintptr_t)blkptr_offset), flags);
+	else if (flags & ZDB_FLAG_RAW)
+		zdb_dump_block_raw(buf, size, flags);
+	else if (flags & ZDB_FLAG_INDIRECT)
+		zdb_dump_indirect((blkptr_t *)buf, size / sizeof (blkptr_t),
+		    flags);
+	else if (flags & ZDB_FLAG_GBH)
+		zdb_dump_gbh(buf, flags);
+	else
+		zdb_dump_block(thing, buf, size, flags);
+}
+
 /*
  * Read a block from a pool and print it out.  The syntax of the
  * block descriptor is:
@@ -5803,18 +5820,7 @@ zdb_read_block(char *thing, spa_t *spa)
 		borrowed = B_TRUE;
 	}
 
-	if (flags & ZDB_FLAG_PRINT_BLKPTR)
-		zdb_print_blkptr((blkptr_t *)(void *)
-		    ((uintptr_t)buf + (uintptr_t)blkptr_offset), flags);
-	else if (flags & ZDB_FLAG_RAW)
-		zdb_dump_block_raw(buf, size, flags);
-	else if (flags & ZDB_FLAG_INDIRECT)
-		zdb_dump_indirect((blkptr_t *)buf, size / sizeof (blkptr_t),
-		    flags);
-	else if (flags & ZDB_FLAG_GBH)
-		zdb_dump_gbh(buf, flags);
-	else
-		zdb_dump_block(thing, buf, size, flags);
+	zdb_display_block(thing, buf, size, blkptr_offset, flags);
 
 	if (borrowed)
 		abd_return_buf_copy(pabd, buf, size);
