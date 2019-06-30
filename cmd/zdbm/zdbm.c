@@ -119,6 +119,8 @@ static void mos_obj_refd(uint64_t);
 static void mos_obj_refd_multiple(uint64_t);
 static void zdb_dump_block_raw(void *buf, uint64_t size, int flags);
 static void zdb_print_blkptr(blkptr_t *bp, int flags);
+static void zdb_read_block(spa_t *spa, char *vdev, uint64_t offset,
+        uint64_t size, uint64_t *psize, abd_t **pabd, int flags)
 
 
 #define	ZDB_FLAG_CHECKSUM	0x0001
