@@ -5872,9 +5872,9 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
         uint64_t *psize, abd_t **pabd, int flags)
 {
 	(void) fprintf(stderr, "zdb_read_block() vdev: %s\n", vdev);
-	(void) fprintf(stderr, "zdb_read_block() offset: %d\n", offset);
-	(void) fprintf(stderr, "zdb_read_block() size: %d\n", size);
-	(void) fprintf(stderr, "zdb_read_block() *psize: %d\n", *psize);
+	(void) fprintf(stderr, "zdb_read_block() offset: %ld\n", offset);
+	(void) fprintf(stderr, "zdb_read_block() size: %ld\n", size);
+	(void) fprintf(stderr, "zdb_read_block() *psize: %ld\n", *psize);
 	(void) fprintf(stderr, "zdb_read_block() flags: %d\n", flags);
 	vdev_t *vd;
 	int error;
@@ -5884,6 +5884,7 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
 	dva_t *dva = bp->blk_dva;
 
 	vd = zdb_vdev_lookup(spa->spa_root_vdev, vdev);
+	(void) fprintf(stderr, "zdb_read_block() zdb_vdev_lookup() done\n");
 	if (vd == NULL) {
 		(void) printf("***Invalid vdev: %s\n", vdev);
 		free(vdev);
