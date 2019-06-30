@@ -1539,7 +1539,9 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		for (i = 0; i < ndvas; i++) {
 			(void) fprintf(stderr, "visit_indirect() i: %i\n", ndvas);
 			dva_t *dva;// = bp->blk_dva;  //todo free
-			dva = &bp->blk_dva[i]; //error: ‘dva’ is a pointer; did you mean to use ‘->’ _VDEV(&dva)
+			//dva = &bp->blk_dva[i]; //error: ‘dva’ is a pointer; did you mean to use ‘->’ _VDEV(&dva)
+			//dva = &bp->blk_dva[i]; //expected ‘char *’ but argument is of type ‘long long unsigned int’ _VDEV(dva)
+			dva = bp->blk_dva[i]; //
 			zdb_read_block(spa,
 			    DVA_GET_VDEV(dva),
 			    DVA_GET_OFFSET(dva),
