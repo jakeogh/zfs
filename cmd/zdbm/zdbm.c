@@ -1534,11 +1534,10 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		abd_t *pabd;
 		int flags = ZDB_FLAG_DECOMPRESS;
 		//zdb_read_block(spa, vdev, offset, size, &psize, &pabd, flags);
-		zdb_read_block(spa, DVA_GET_VDEV(&bp->blk_dva[0]), DVA_GET_OFFSET(&bp->blk_dva[0]), DVA_GET_ASIZE(&bp->blk_dva[0]), &psize, &pabd, flags);
-//"DVA[%d]=<%llu:%llx:%llx>%c"
-//(u_longlong_t)DVA_GET_VDEV(dva)
-//(u_longlong_t)DVA_GET_OFFSET(dva)
-//(u_longlong_t)DVA_GET_ASIZE(dva)
+		zdb_read_block(spa,
+		    DVA_GET_VDEV(&bp->blk_dva[0]),
+		    DVA_GET_OFFSET(&bp->blk_dva[0]),
+		    DVA_GET_ASIZE(&bp->blk_dva[0]), &psize, &pabd, flags);
 
 		}
 		(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp));
@@ -5863,6 +5862,7 @@ static void
 zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
         uint64_t *psize, abd_t **pabd, int flags)
 {
+	(void) fprintf(stderr, "zdb_read_block() vdev: %s\n", vdev);
 	vdev_t *vd;
 	int error;
 	uint64_t lsize = 0;
