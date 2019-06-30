@@ -1551,7 +1551,8 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			dva = bp->blk_dva; //
 			//vdev = DVA_GET_VDEV(dva); //warning: assignment to ‘char *’ from ‘long long unsigned int’ makes pointer from integer without a cast
 			//vdev = DVA_GET_VDEV(&dva); //error: ‘dva’ is a pointer; did you mean to use ‘->’?
-			(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
+			(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));  //0
+			(void) fprintf(stderr, "visit_indirect() : %llu\n",               DVA_GET_VDEV(&dva[i]));  //0
                         /*
 			vdev = DVA_GET_VDEV(&dva[i]); // warning: assignment to ‘char *’ from ‘long long unsigned int’ makes pointer from integer without a cast
 			//dva = &bp->blk_dva[i]; //
@@ -1559,6 +1560,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			//vdev = DVA_GET_VDEV(&dva); //
 			//vdev = DVA_GET_VDEV(dva); //
 			(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);
+	zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size, uint64_t *psize, abd_t **pabd, int flags)
 			zdb_read_block(spa,
 			    vdev,
 			    DVA_GET_OFFSET(&dva),
