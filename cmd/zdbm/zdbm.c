@@ -1535,7 +1535,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		abd_t *pabd;
 		int flags = ZDB_FLAG_DECOMPRESS;
 		int ndvas = BP_GET_NDVAS(bp);
-                char vdev[2];
+                char vdev[3];
                 (void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
 		for (i = 0; i < ndvas; i++) {
 			(void) fprintf(stderr, "visit_indirect() i: %d\n", i);
@@ -1553,7 +1553,8 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			//vdev = DVA_GET_VDEV(&dva); //error: ‘dva’ is a pointer; did you mean to use ‘->’?
 			(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));  //0
 			(void) fprintf(stderr, "visit_indirect() : %llu\n",               DVA_GET_VDEV(&dva[i]));  //0
-			(void) sprintf(vdev, 2, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
+			int count = sprintf(vdev, 2, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
+                        (void) fprintf(stderr, "count: %d\n", count)
 			(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);  //0
                         /*
 			vdev = DVA_GET_VDEV(&dva[i]); // warning: assignment to ‘char *’ from ‘long long unsigned int’ makes pointer from integer without a cast
