@@ -1552,6 +1552,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			    vdev,
 			    DVA_GET_OFFSET(&dva[i]),
 			    DVA_GET_ASIZE(&dva[i]), &psize, &pabd, flags);
+			(void) fprintf(stderr, "visit_indirect() done zdb_read_block()\n");
 		}
 		//zdb_read_block(spa, vdev, offset, size, &psize, &pabd, flags);
 
