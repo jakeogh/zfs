@@ -1553,7 +1553,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			//vdev = DVA_GET_VDEV(&dva); //error: ‘dva’ is a pointer; did you mean to use ‘->’?
 			(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));  //0
 			(void) fprintf(stderr, "visit_indirect() : %llu\n",               DVA_GET_VDEV(&dva[i]));  //0
-			int count = sprintf(vdev, 2, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
+			int count = snprintf(vdev, 2, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
                         (void) fprintf(stderr, "count: %d\n", count)
 			(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);  //0
                         /*
