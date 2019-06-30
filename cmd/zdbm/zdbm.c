@@ -1539,13 +1539,20 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
                 (void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
 		for (i = 0; i < ndvas; i++) {
 			(void) fprintf(stderr, "visit_indirect() i: %d\n", i);
-			dva_t dva;// = bp->blk_dva;  //todo free
-			//dva = &bp->blk_dva[i]; //error: ‘dva’ is a pointer; did you mean to use ‘->’ _VDEV(&dva)
-			//dva = &bp->blk_dva[i]; //expected ‘char *’ but argument is of type ‘long long unsigned int’ _VDEV(dva)
-			dva = bp->blk_dva[i]; // incompatible types when assigning to type ‘dva_t *’ {aka ‘struct dva *’} from type ‘dva_t’ {aka ‘struct dva’} (dva_t *dva;)
-			//vdev = DVA_GET_VDEV(&dva); // warning: assignment to ‘char *’ from ‘long long unsigned int’ makes pointer from integer without a cast
-			//vdev = DVA_GET_VDEV(dva); //  error: invalid type argument of ‘->’ (have ‘dva_t’ {aka ‘struct dva’})
-			vdev = DVA_GET_VDEV(*dva); //
+			//dva_t dva;// = bp->blk_dva;  //todo free
+			////dva = &bp->blk_dva[i]; //error: ‘dva’ is a pointer; did you mean to use ‘->’ _VDEV(&dva)
+			////dva = &bp->blk_dva[i]; //expected ‘char *’ but argument is of type ‘long long unsigned int’ _VDEV(dva)
+			//dva = bp->blk_dva[i]; // incompatible types when assigning to type ‘dva_t *’ {aka ‘struct dva *’} from type ‘dva_t’ {aka ‘struct dva’} (dva_t *dva;)
+			////vdev = DVA_GET_VDEV(&dva); // warning: assignment to ‘char *’ from ‘long long unsigned int’ makes pointer from integer without a cast
+			////vdev = DVA_GET_VDEV(dva); //  error: invalid type argument of ‘->’ (have ‘dva_t’ {aka ‘struct dva’})
+			//vdev = DVA_GET_VDEV(*dva); //error: invalid type argument of unary ‘*’ (have ‘dva_t’ {aka ‘struct dva’})
+			dva_t *dva;      //
+			//dva = &bp->blk_dva[i]; //
+			//dva = &bp->blk_dva[i]; //
+			dva = bp->blk_dva[i]; //
+			//vdev = DVA_GET_VDEV(&dva); //
+			//vdev = DVA_GET_VDEV(dva); //
+			vdev = DVA_GET_VDEV(dva); //
 			(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);
 			zdb_read_block(spa,
 			    vdev,
