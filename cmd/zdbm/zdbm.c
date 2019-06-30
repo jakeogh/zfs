@@ -5886,11 +5886,14 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
 	vd = zdb_vdev_lookup(spa->spa_root_vdev, vdev);
 	(void) fprintf(stderr, "zdb_read_block() zdb_vdev_lookup() done\n");
 	if (vd == NULL) {
+		(void) fprintf(stderr, "zdb_read_block() vd == NULL\n");
 		(void) printf("***Invalid vdev: %s\n", vdev);
 		free(vdev);
 		return;
 	} else {
+		(void) fprintf(stderr, "zdb_read_block() calling free(vdev)\n");
 		free(vdev);
+		(void) fprintf(stderr, "zdb_read_block() done calling free(vdev)\n");
 		if (vd->vdev_path)
 			(void) fprintf(stderr, "Found vdev: %s\n",
 			    vd->vdev_path);
