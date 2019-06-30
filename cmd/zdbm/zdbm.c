@@ -5891,6 +5891,7 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
 		free(vdev);
 		return;
 	} else {
+		(void) fprintf(stderr, "Found vdev type: %s\n", vd->vdev_ops->vdev_op_type);
 		(void) fprintf(stderr, "zdb_read_block() calling free(vdev)\n");
 		free(vdev);
 		(void) fprintf(stderr, "zdb_read_block() done calling free(vdev)\n");
