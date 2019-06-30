@@ -5622,6 +5622,7 @@ zdb_dump_block(char *label, void *buf, uint64_t size, int flags)
 static vdev_t *
 zdb_vdev_lookup(vdev_t *vdev, const char *path)
 {
+	(void) fprintf(stderr, "zdb_vdev_lookup() path: %s\n", path);
 	char *s, *p, *q;
 	unsigned i;
 
