@@ -1549,11 +1549,12 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			dva_t *dva;      //
 			//dva = bp->blk_dva[i]; //incompatible types when assigning to type ‘dva_t *’ {aka ‘struct dva *’} from type ‘dva_t’ {aka ‘struct dva’}
 			dva = bp->blk_dva; //
+			//vdev = DVA_GET_VDEV(dva); //assignment to ‘char *’ from ‘long long unsigned int’ makes pointer from integer without a cast
+			vdev = DVA_GET_VDEV(&dva); //assignment to ‘char *’ from ‘long long unsigned int’ makes pointer from integer without a cast
 			//dva = &bp->blk_dva[i]; //
 			//dva = &bp->blk_dva[i]; //
 			//vdev = DVA_GET_VDEV(&dva); //
 			//vdev = DVA_GET_VDEV(dva); //
-			vdev = DVA_GET_VDEV(dva); //
 			(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);
 			zdb_read_block(spa,
 			    vdev,
