@@ -1526,6 +1526,12 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
                   // so that should get fixed first. For embedded BP's this is already taken care of
                   // in module/zfs/blkptr.c decode_embedded_bp() which checks BP_GET_COMPRESS(bp)
 		//zdb_read_block(, spa, display_block, BP_GET_LSIZE(bp));
+
+		/* zdb_read_block() */
+		uint64_t psize = 0;
+		abd_t *pabd;
+		//zdb_read_block(spa, vdev, offset, size, &psize, &pabd, flags);
+		//zdb_read_block(spa, DVA_GET_VDEV(&bp->blk_dva[0]), offset, size, &psize, &pabd, flags);
                 ;
 //"DVA[%d]=<%llu:%llx:%llx>%c"
 //(u_longlong_t)DVA_GET_VDEV(dva)
@@ -5757,6 +5763,7 @@ parse_block_descriptor(char *thing, char **vdev, uint64_t *offset,
 	}
 	free(flagstr);
 	free(dup);
+        (void) fprintf(stderr, "HERE: flags: %d\n", flags);
 }
 
 static int
