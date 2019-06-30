@@ -1535,15 +1535,18 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		abd_t *pabd;
 		int flags = ZDB_FLAG_DECOMPRESS;
 		int ndvas = BP_GET_NDVAS(bp);
+                char *vdev;
                 (void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
 		for (i = 0; i < ndvas; i++) {
-			(void) fprintf(stderr, "visit_indirect() i: %i\n", ndvas);
+			(void) fprintf(stderr, "visit_indirect() i: %d\n", i);
 			dva_t dva;// = bp->blk_dva;  //todo free
 			//dva = &bp->blk_dva[i]; //error: ‘dva’ is a pointer; did you mean to use ‘->’ _VDEV(&dva)
 			//dva = &bp->blk_dva[i]; //expected ‘char *’ but argument is of type ‘long long unsigned int’ _VDEV(dva)
 			dva = bp->blk_dva[i]; // incompatible types when assigning to type ‘dva_t *’ {aka ‘struct dva *’} from type ‘dva_t’ {aka ‘struct dva’} (dva_t *dva;)
+			vdev = DVA_GET_VDEV(&dva);
+			(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);
 			zdb_read_block(spa,
-			    DVA_GET_VDEV(&dva),
+			    vdev,
 			    DVA_GET_OFFSET(&dva),
 			    DVA_GET_ASIZE(&dva), &psize, &pabd, flags);
 		}
