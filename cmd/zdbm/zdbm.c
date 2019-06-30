@@ -5886,6 +5886,8 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
 	(void) fprintf(stderr, "zdb_read_block() vdev: %s\n", vdev);
 	(void) fprintf(stderr, "zdb_read_block() offset: %d\n", offset);
 	(void) fprintf(stderr, "zdb_read_block() size: %d\n", size);
+	(void) fprintf(stderr, "zdb_read_block() *psize: %d\n", *psize);
+	(void) fprintf(stderr, "zdb_read_block() flags: %d\n", flags);
 	vdev_t *vd;
 	int error;
 	uint64_t lsize = 0;
