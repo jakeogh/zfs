@@ -1505,6 +1505,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
     blkptr_t *bp, const zbookmark_phys_t *zb, uint64_t fsize)
 {
 	int err = 0;
+	int i;
 
 	if (bp->blk_birth == 0)
 		return (0);
@@ -1533,7 +1534,15 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		uint64_t psize = 0;
 		abd_t *pabd;
 		int flags = ZDB_FLAG_DECOMPRESS;
+		const dva_t *dva = bp->blk_dva;  //todo free
+		int ndvas = BP_GET_NDVAS(bp);
+                (void) fprintf(stderr, "visit_indirect() ndvas: %d", ndvas);
+		for (i = 0; i < ndvas; i++) {
+			(void) fprintf(stderr, "visit_indirect() i: %i", ndvas);
+
+		}
 		//zdb_read_block(spa, vdev, offset, size, &psize, &pabd, flags);
+
 		zdb_read_block(spa,
 		    DVA_GET_VDEV(bp->blk_dva[0]),
 		    DVA_GET_OFFSET(bp->blk_dva[0]),
