@@ -1544,7 +1544,8 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			//dva = &bp->blk_dva[i]; //expected ‘char *’ but argument is of type ‘long long unsigned int’ _VDEV(dva)
 			dva = bp->blk_dva[i]; // incompatible types when assigning to type ‘dva_t *’ {aka ‘struct dva *’} from type ‘dva_t’ {aka ‘struct dva’} (dva_t *dva;)
 			//vdev = DVA_GET_VDEV(&dva); // warning: assignment to ‘char *’ from ‘long long unsigned int’ makes pointer from integer without a cast
-			vdev = DVA_GET_VDEV(dva); //
+			//vdev = DVA_GET_VDEV(dva); //  error: invalid type argument of ‘->’ (have ‘dva_t’ {aka ‘struct dva’})
+			vdev = DVA_GET_VDEV(*dva); //
 			(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);
 			zdb_read_block(spa,
 			    vdev,
