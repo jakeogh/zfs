@@ -5901,6 +5901,7 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
 	lsize = size;
 
 	*pabd = abd_alloc_for_io(SPA_MAXBLOCKSIZE, B_FALSE);
+	(void) fprintf(stderr, "zdb_read_block() abd_alloc_for_io() done\n");
 
 	BP_ZERO(bp);
 
@@ -5922,7 +5923,7 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
 
 	spa_config_enter(spa, SCL_STATE, FTAG, RW_READER);
 	zio = zio_root(spa, NULL, NULL, 0);
-	(void) fprintf(stderr, "zio_root() done\n");
+	(void) fprintf(stderr, "zdb_read_block() zio_root() done\n");
 
 	if (vd == vd->vdev_top) {
 		/*
