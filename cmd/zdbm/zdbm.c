@@ -1534,7 +1534,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		uint64_t psize = 0;
 		abd_t *pabd;
 		int flags = ZDB_FLAG_DECOMPRESS;
-		const dva_t *dva = &bp->blk_dva;  //todo free
+		const dva_t *dva = *bp->blk_dva;  //todo free
 		int ndvas = BP_GET_NDVAS(bp);
                 (void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
 		for (i = 0; i < ndvas; i++) {
