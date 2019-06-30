@@ -1536,10 +1536,13 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		int flags = ZDB_FLAG_DECOMPRESS;
 		const dva_t *dva = bp->blk_dva;  //todo free
 		int ndvas = BP_GET_NDVAS(bp);
-                (void) fprintf(stderr, "visit_indirect() ndvas: %d", ndvas);
+                (void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
 		for (i = 0; i < ndvas; i++) {
-			(void) fprintf(stderr, "visit_indirect() i: %i", ndvas);
-
+			(void) fprintf(stderr, "visit_indirect() i: %i\n", ndvas);
+			zdb_read_block(spa,
+			    DVA_GET_VDEV(&dva[i]),
+			    DVA_GET_OFFSET(&dva[i]),
+			    DVA_GET_ASIZE(&dva[i]), &psize, &pabd, flags);
 		}
 		//zdb_read_block(spa, vdev, offset, size, &psize, &pabd, flags);
 
