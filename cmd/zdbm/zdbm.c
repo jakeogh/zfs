@@ -1539,11 +1539,11 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		for (i = 0; i < ndvas; i++) {
 			(void) fprintf(stderr, "visit_indirect() i: %i\n", ndvas);
 			dva_t *dva;// = bp->blk_dva;  //todo free
-			dva = &bp->blk_dva[i];
+			dva = &bp->blk_dva[i]; //error: ‘dva’ is a pointer; did you mean to use ‘->’ _VDEV(&dva)
 			zdb_read_block(spa,
-			    DVA_GET_VDEV(&dva),
-			    DVA_GET_OFFSET(&dva),
-			    DVA_GET_ASIZE(&dva), &psize, &pabd, flags);
+			    DVA_GET_VDEV(dva),
+			    DVA_GET_OFFSET(dva),
+			    DVA_GET_ASIZE(dva), &psize, &pabd, flags);
 		}
 		//zdb_read_block(spa, vdev, offset, size, &psize, &pabd, flags);
 
