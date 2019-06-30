@@ -1524,43 +1524,29 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 				(void) fprintf(stderr, "decode failed: %u\n", err);
 				exit(1);
 			}
-		} else { // right here, there needs to be a else and a call to zdb_read_block() to fill buf
-                  // unfortunatly, zdb_read_block() cant accept an arg to specify the compression alg
-                  // so that should get fixed first. For embedded BP's this is already taken care of
-                  // in module/zfs/blkptr.c decode_embedded_bp() which checks BP_GET_COMPRESS(bp)
-		//zdb_read_block(, spa, display_block, BP_GET_LSIZE(bp));
-
-		/* zdb_read_block() */
-		uint64_t psize = 0;
-		abd_t *pabd;
-		int flags = ZDB_FLAG_DECOMPRESS;
-		int ndvas = BP_GET_NDVAS(bp);
-                char vdev[3];
-                (void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
-		for (i = 0; i < ndvas; i++) {
-			(void) fprintf(stderr, "visit_indirect() i: %d\n", i);
-			dva_t *dva;      //
-			dva = bp->blk_dva; //
-			(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));  //0
-			(void) fprintf(stderr, "visit_indirect() : %llu\n",               DVA_GET_VDEV(&dva[i]));  //0
-			int count = snprintf(vdev, 2, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
-                        (void) fprintf(stderr, "count: %d\n", count);
-                        ASSERT(count <= 3);
-			(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);  //0
-	//zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size, uint64_t *psize, abd_t **pabd, int flags)
-			zdb_read_block(spa,
-			    vdev,
-			    DVA_GET_OFFSET(&dva[i]),
-			    DVA_GET_ASIZE(&dva[i]), &psize, &pabd, flags);
-			(void) fprintf(stderr, "visit_indirect() done zdb_read_block()\n");
-		}
-		//zdb_read_block(spa, vdev, offset, size, &psize, &pabd, flags);
-
-		//zdb_read_block(spa,
-		//    DVA_GET_VDEV(bp->blk_dva[0]),
-		//    DVA_GET_OFFSET(bp->blk_dva[0]),
-		//    DVA_GET_ASIZE(bp->blk_dva[0]), &psize, &pabd, flags);
-
+		} else {
+			uint64_t psize = 0;
+			abd_t *pabd;
+			int flags = ZDB_FLAG_DECOMPRESS;
+			int ndvas = BP_GET_NDVAS(bp);
+                	char vdev[3];
+                	(void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
+			for (i = 0; i < ndvas; i++) {
+				(void) fprintf(stderr, "visit_indirect() i: %d\n", i);
+				dva_t *dva;      //
+				dva = bp->blk_dva; //
+				(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));  //0
+				(void) fprintf(stderr, "visit_indirect() : %llu\n",               DVA_GET_VDEV(&dva[i]));  //0
+				int count = snprintf(vdev, 2, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
+                	        (void) fprintf(stderr, "count: %d\n", count);
+                	        ASSERT(count <= 3);
+				(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);  //0
+				zdb_read_block(spa,
+				    vdev,
+				    DVA_GET_OFFSET(&dva[i]),
+				    DVA_GET_ASIZE(&dva[i]), &psize, &pabd, flags);
+				(void) fprintf(stderr, "visit_indirect() done zdb_read_block()\n");
+			}
 		}
 		(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp));
 		zdb_print_blkptr(bp, 0);
@@ -5936,6 +5922,7 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
 
 	spa_config_enter(spa, SCL_STATE, FTAG, RW_READER);
 	zio = zio_root(spa, NULL, NULL, 0);
+	(void) fprintf(stderr, "zio_root() done\n");
 
 	if (vd == vd->vdev_top) {
 		/*
