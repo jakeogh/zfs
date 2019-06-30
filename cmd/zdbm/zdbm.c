@@ -1547,9 +1547,10 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			////vdev = DVA_GET_VDEV(dva); //  error: invalid type argument of ‘->’ (have ‘dva_t’ {aka ‘struct dva’})
 			//vdev = DVA_GET_VDEV(*dva); //error: invalid type argument of unary ‘*’ (have ‘dva_t’ {aka ‘struct dva’})
 			dva_t *dva;      //
+			//dva = bp->blk_dva[i]; //incompatible types when assigning to type ‘dva_t *’ {aka ‘struct dva *’} from type ‘dva_t’ {aka ‘struct dva’}
+			dva = bp->blk_dva; //
 			//dva = &bp->blk_dva[i]; //
 			//dva = &bp->blk_dva[i]; //
-			dva = bp->blk_dva[i]; //
 			//vdev = DVA_GET_VDEV(&dva); //
 			//vdev = DVA_GET_VDEV(dva); //
 			vdev = DVA_GET_VDEV(dva); //
