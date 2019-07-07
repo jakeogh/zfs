@@ -6306,7 +6306,7 @@ main(int argc, char **argv)
 		if (argc != 2)
 			usage();
 		dump_opt['v'] = verbose + 3;
-		return (dump_path(argv[0], argv[1]));
+		return (dump_path(argv[0], argv[1]), compress_alg_index);
 	}
 
 	if (dump_opt['X'] || dump_opt['F'])
