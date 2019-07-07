@@ -1511,7 +1511,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		return (0);
 
 	if (fsize != -1 && BP_GET_LEVEL(bp) == 0) {
-		char * buf;
+		char *buf;
 		buf = malloc(SPA_MAXBLOCKSIZE); //umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL); ?
 		if (buf == NULL) {
 			(void) fprintf(stderr, "out of memory\n");
@@ -1534,8 +1534,8 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			(void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
 			for (i = 0; i < ndvas; i++) {
 				(void) fprintf(stderr, "visit_indirect() i: %d\n", i);
-				dva_t *dva;      //
-				dva = bp->blk_dva; //
+				dva_t *dva;
+				dva = bp->blk_dva;
 				(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));  //0
 				(void) fprintf(stderr, "visit_indirect() : %llu\n",               DVA_GET_VDEV(&dva[i]));  //0
 				int count = sprintf(vdev, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
@@ -1546,6 +1546,10 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 				    DVA_GET_OFFSET(&dva[i]),
 				    DVA_GET_ASIZE(&dva[i]), &psize, &pabd, flags);
 				(void) fprintf(stderr, "visit_indirect() done zdb_read_block()\n");
+
+
+
+
 			}
 		}
 		(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp));
@@ -5965,23 +5969,23 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
 }
 
 static void
-zdb_populate_block_buf(char *thing, void **buf, boolean_t *borrowed,
+zdb_populate_block_buf(char *thing, void **buf, void **lbuf, boolean_t *borrowed,
         abd_t *pabd, uint64_t psize, uint64_t bp_lsize, uint64_t *size,
         int flags, int compress_alg_index)
 {
 	//boolean_t borrowed = B_FALSE;
-	void *lbuf;
+	//void *lbuf;
 
-	lbuf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
+	*lbuf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
 	if (flags & ZDB_FLAG_DECOMPRESS) {
-		zdb_decompress_block(thing, *buf, lbuf, pabd, psize, bp_lsize,
+		zdb_decompress_block(thing, *buf, *lbuf, pabd, psize, bp_lsize,
 		    *size, compress_alg_index);
 	} else {
 		*size = psize;
 		*buf = abd_borrow_buf_copy(pabd, *size);
 		*borrowed = B_TRUE;
 	}
-	umem_free(lbuf, SPA_MAXBLOCKSIZE);
+	//umem_free(lbuf, SPA_MAXBLOCKSIZE);  // zdb_decompress_block() *buf = lbuf;
 }
 
 
@@ -6001,24 +6005,10 @@ zdb_read_block_from_descriptor(char *thing, spa_t *spa, boolean_t display_block,
 	abd_t *pabd;
 	zdb_read_block(spa, vdev, offset, size, &psize, &pabd, flags);
 
-	void *buf;
-	boolean_t borrowed = B_FALSE;
-	zdb_populate_block_buf(thing, &buf, &borrowed, pabd, psize, bp_lsize, &size, flags, compress_alg_index);  //thing isnt useful
-
-/*
-	boolean_t borrowed = B_FALSE;
 	void *lbuf, *buf;
+	boolean_t borrowed = B_FALSE;
+	zdb_populate_block_buf(thing, &buf, &lbuf, &borrowed, pabd, psize, bp_lsize, &size, flags, compress_alg_index);  //thing isnt useful
 
-	lbuf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
-	if (flags & ZDB_FLAG_DECOMPRESS) {
-		zdb_decompress_block(thing, &buf, lbuf, pabd, psize, bp_lsize,
-		    &size, compress_alg_index);
-	} else {
-		size = psize;
-		buf = abd_borrow_buf_copy(pabd, size);
-		borrowed = B_TRUE;
-	}
-*/
 	if (display_block)
 		zdb_display_block(thing, buf, size, blkptr_offset, flags);
 
@@ -6026,7 +6016,7 @@ zdb_read_block_from_descriptor(char *thing, spa_t *spa, boolean_t display_block,
 		abd_return_buf_copy(pabd, buf, size);
 
 	abd_free(pabd);
-	//umem_free(lbuf, SPA_MAXBLOCKSIZE);
+	umem_free(lbuf, SPA_MAXBLOCKSIZE);  // *buf = lbuf;
 	return;
 }
 
