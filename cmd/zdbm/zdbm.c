@@ -1535,8 +1535,8 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			abd_t *pabd;
 			int flags = ZDB_FLAG_DECOMPRESS;
 			int ndvas = BP_GET_NDVAS(bp);
-			zdb_print_blkptr(bp, 0);
-			uint64_t lsize = BPE_GET_LSIZE(bp); //ASSERT FAIL !BP_IS_EMBEDDED(bp)
+			//zdb_print_blkptr(bp, 0);
+			//uint64_t lsize = BPE_GET_LSIZE(bp); //ASSERT FAIL !BP_IS_EMBEDDED(bp)
 			char *vdev;
 			vdev = calloc(1, PATH_MAX * sizeof(char));
 			dva_t *dva;
@@ -1565,7 +1565,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 				void *lbuf;
 				boolean_t borrowed = B_FALSE;
 				(void) fprintf(stderr, "visit_indirect() calling zdb_populate_block()\n");
-				zdb_populate_block_buf(NULL, &buf, &lbuf, &borrowed, pabd, psize, lsize, &asize, flags, compress_alg_index);
+				zdb_populate_block_buf(NULL, &buf, &lbuf, &borrowed, pabd, psize, asize, &asize, flags, compress_alg_index);
 				(void) fprintf(stderr, "visit_indirect() done calling zdb_populate_block()\n");
 				//ok buf is populated. write it.
 				zdb_dump_block_raw(buf, fsize, 0);
