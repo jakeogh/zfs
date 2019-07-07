@@ -5486,7 +5486,7 @@ dump_zpool(spa_t *spa, int compress_alg_index)
 			dump_dtl(spa->spa_root_vdev, 0);
 		}
 		(void) dmu_objset_find(spa_name(spa), dump_one_dir,
-		    NULL, DS_FIND_SNAPSHOTS | DS_FIND_CHILDREN, compress_alg_index);
+		    NULL, DS_FIND_SNAPSHOTS | DS_FIND_CHILDREN);
 
 		if (rc == 0 && !dump_opt['L'])
 			rc = dump_mos_leaks(spa);
