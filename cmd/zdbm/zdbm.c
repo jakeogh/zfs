@@ -1560,7 +1560,10 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 				//(void) fprintf(stderr, "visit_indirect() about to *size = (size_t)psize\n");
                 		//*size = psize;  //uug
 				//(void) fprintf(stderr, "visit_indirect() after to *size = psize\n");
-				zdb_populate_block_buf(NULL, &buf, &lbuf, &borrowed, pabd, psize, BPE_GET_LSIZE(bp), &DVA_GET_ASIZE(&dva[i]), flags, compress_alg_index);
+                                uint64_t size;
+                                asize = DVA_GET_ASIZE(&dva[i]);
+				(void) fprintf(stderr, "asize: %lln\n", asize);
+				zdb_populate_block_buf(NULL, &buf, &lbuf, &borrowed, pabd, psize, BPE_GET_LSIZE(bp), &asize, flags, compress_alg_index);
 				//ok buf is populated. write it.
 				zdb_dump_block_raw(buf, fsize, 0);
 				if (borrowed)
