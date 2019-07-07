@@ -1555,6 +1555,8 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 
 				void *lbuf;
 				boolean_t borrowed = B_FALSE;
+                		uint64_t *size;
+                		*size = psize;  //uug
 				zdb_populate_block_buf(NULL, &buf, &lbuf, &borrowed, pabd, psize, BPE_GET_LSIZE(bp), &size, flags, compress_alg_index);
 				//ok buf is populated. write it.
 				zdb_dump_block_raw(buf, fsize, 0);
@@ -6006,7 +6008,7 @@ zdb_read_block_from_descriptor(char *thing, spa_t *spa, boolean_t display_block,
 	char *vdev;
 	uint64_t offset = 0, size = 0, blkptr_offset = 0;
 	int flags = 0;
-	parse_block_descriptor(thing, &vdev, &offset, &size, &flags,
+	parse_block_descriptor(thing, &vdev, &offset, &size, &flags,  // size is the psize in the DVA
 		&blkptr_offset);
 
 	/* zdb_read_block() */
