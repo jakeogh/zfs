@@ -1561,7 +1561,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 				//ok buf is populated. write it.
 				zdb_dump_block_raw(buf, fsize, 0);
 				if (borrowed)
-					abd_return_buf_copy(pabd, buf, size);
+					abd_return_buf_copy(pabd, buf, *size);
 				abd_free(pabd);
 				umem_free(lbuf, SPA_MAXBLOCKSIZE);  // *buf = lbuf;
 			}
