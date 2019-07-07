@@ -1542,8 +1542,8 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			for (i = 0; i < ndvas; i++) {
 				(void) fprintf(stderr, "visit_indirect() i: %d\n", i);
 				dva = bp->blk_dva;
-				(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));  //0
-				(void) fprintf(stderr, "visit_indirect() : %llu\n",               DVA_GET_VDEV(&dva[i]));  //0
+				//(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));  //0
+				//(void) fprintf(stderr, "visit_indirect() : %llu\n",               DVA_GET_VDEV(&dva[i]));  //0
 				int count = sprintf(vdev, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
 				(void) fprintf(stderr, "count: %d\n", count);
 				(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);
