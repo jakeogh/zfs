@@ -1556,6 +1556,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 				void *lbuf;
 				boolean_t borrowed = B_FALSE;
                 		size_t *size;
+				(void) fprintf(stderr, "visit_indirect() about to *size = (size_t)psize\n");
                 		*size = (size_t)psize;  //uug
 				zdb_populate_block_buf(NULL, &buf, &lbuf, &borrowed, pabd, psize, BPE_GET_LSIZE(bp), size, flags, compress_alg_index);
 				//ok buf is populated. write it.
