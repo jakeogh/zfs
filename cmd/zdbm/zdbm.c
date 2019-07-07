@@ -1555,8 +1555,8 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 
 				void *lbuf;
 				boolean_t borrowed = B_FALSE;
-                		uint64_t *size;
-                		*size = psize;  //uug
+                		size_t *size;
+                		*size = (size_t)psize;  //uug
 				zdb_populate_block_buf(NULL, &buf, &lbuf, &borrowed, pabd, psize, BPE_GET_LSIZE(bp), size, flags, compress_alg_index);
 				//ok buf is populated. write it.
 				zdb_dump_block_raw(buf, fsize, 0);
@@ -2510,7 +2510,7 @@ static const char *objset_types[DMU_OST_NUMTYPES] = {
 	"NONE", "META", "ZPL", "ZVOL", "OTHER", "ANY" };
 
 static void
-dump_dir(objset_t *os)
+dump_dir(objset_t *os, int compress_alg_index)
 {
 	dmu_objset_stats_t dds;
 	uint64_t object, object_count;
@@ -2570,7 +2570,7 @@ dump_dir(objset_t *os)
 	if (zopt_objects != 0) {
 		for (i = 0; i < zopt_objects; i++)
 			dump_object(os, zopt_object[i], verbosity,
-			    &print_header, NULL);
+			    &print_header, NULL, compress_alg_index);
 		(void) printf("\n");
 		return;
 	}
@@ -3330,7 +3330,7 @@ static uint64_t remap_deadlist_count = 0;
 
 /*ARGSUSED*/
 static int
-dump_one_dir(const char *dsname, void *arg)
+dump_one_dir(const char *dsname, void *arg, int compress_alg_index)
 {
 	int error;
 	objset_t *os;
@@ -3352,7 +3352,7 @@ dump_one_dir(const char *dsname, void *arg)
 		remap_deadlist_count++;
 	}
 
-	dump_dir(os);
+	dump_dir(os, compress_alg_index);
 	close_objset(os, FTAG);
 	fuid_table_destroy();
 	return (0);
@@ -5428,7 +5428,7 @@ dump_mos_leaks(spa_t *spa)
 }
 
 static void
-dump_zpool(spa_t *spa)
+dump_zpool(spa_t *spa, int compress_alg_index)
 {
 	dsl_pool_t *dp = spa_get_dsl(spa);
 	int rc = 0;
@@ -5486,7 +5486,7 @@ dump_zpool(spa_t *spa)
 			dump_dtl(spa->spa_root_vdev, 0);
 		}
 		(void) dmu_objset_find(spa_name(spa), dump_one_dir,
-		    NULL, DS_FIND_SNAPSHOTS | DS_FIND_CHILDREN);
+		    NULL, DS_FIND_SNAPSHOTS | DS_FIND_CHILDREN, compress_alg_index);
 
 		if (rc == 0 && !dump_opt['L'])
 			rc = dump_mos_leaks(spa);
@@ -6466,7 +6466,7 @@ main(int argc, char **argv)
 		} else if (zopt_objects > 0 && !dump_opt['m']) {
 			dump_dir(spa->spa_meta_objset);
 		} else {
-			dump_zpool(spa);
+			dump_zpool(spa, compress_alg_index);
 		}
 	} else {
 		flagbits['b'] = ZDB_FLAG_PRINT_BLKPTR;
