@@ -5997,7 +5997,7 @@ zdb_populate_block_buf(char *thing, void **buf, void **lbuf, boolean_t *borrowed
 {
 	//boolean_t borrowed = B_FALSE;
 	//void *lbuf;
-	(void) fprintf(stderr, "zdb_populate_block_buf() compression_alg_index: %d\n", compression_alg_index);
+	(void) fprintf(stderr, "zdb_populate_block_buf() compress_alg_index: %d\n", compress_alg_index);
 	(void) fprintf(stderr, "zdb_populate_block_buf() psize: %ld\n", psize);
 	(void) fprintf(stderr, "zdb_populate_block_buf() bp_lsize: %ld\n", bp_lsize);
 	(void) fprintf(stderr, "zdb_populate_block_buf() *size: %ld\n", *size);
