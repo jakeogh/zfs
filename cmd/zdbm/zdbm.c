@@ -3063,7 +3063,7 @@ static char curpath[PATH_MAX];
  * for the last one.
  */
 static int
-dump_path_impl(objset_t *os, uint64_t obj, char *name)
+dump_path_impl(objset_t *os, uint64_t obj, char *name, int compress_alg_index)
 {
 	int err;
 	int header = 1;
@@ -3113,7 +3113,7 @@ dump_path_impl(objset_t *os, uint64_t obj, char *name)
 	switch (doi.doi_type) {
 	case DMU_OT_DIRECTORY_CONTENTS:
 		if (s != NULL && *(s + 1) != '\0')
-			return (dump_path_impl(os, child_obj, s + 1));
+			return (dump_path_impl(os, child_obj, s + 1, compress_alg_index));
 		/*FALLTHROUGH*/
 	case DMU_OT_PLAIN_FILE_CONTENTS:
 		dump_object(os, child_obj, dump_opt['v'], &header, NULL, compress_alg_index);
@@ -3131,7 +3131,7 @@ dump_path_impl(objset_t *os, uint64_t obj, char *name)
  * Dump the blocks for the object specified by path inside the dataset.
  */
 static int
-dump_path(char *ds, char *path)
+dump_path(char *ds, char *path, int compress_alg_index)
 {
 	int err;
 	objset_t *os;
@@ -3151,7 +3151,7 @@ dump_path(char *ds, char *path)
 
 	(void) snprintf(curpath, sizeof (curpath), "dataset=%s path=/", ds);
 
-	err = dump_path_impl(os, root_obj, path);
+	err = dump_path_impl(os, root_obj, path, compress_alg_index);
 
 	close_objset(os, FTAG);
 	return (err);
