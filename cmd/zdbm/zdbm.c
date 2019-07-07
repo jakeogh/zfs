@@ -1505,7 +1505,7 @@ print_indirect(blkptr_t *bp, const zbookmark_phys_t *zb,
 
 static int
 visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
-    blkptr_t *bp, const zbookmark_phys_t *zb, uint64_t fsize)
+    blkptr_t *bp, const zbookmark_phys_t *zb, uint64_t fsize, int compress_alg_index)
 {
 	int err = 0;
 	int i;
@@ -1594,7 +1594,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			SET_BOOKMARK(&czb, zb->zb_objset, zb->zb_object,
 			    zb->zb_level - 1,
 			    zb->zb_blkid * epb + i);
-			err = visit_indirect(spa, dnp, cbp, &czb, fsize);
+			err = visit_indirect(spa, dnp, cbp, &czb, fsize, compress_alg_index);
 			if (err)
 				break;
 			fill += BP_GET_FILL(cbp);
@@ -1609,7 +1609,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 
 /*ARGSUSED*/
 static void
-dump_indirect(dnode_t *dn, uint64_t fsize)
+dump_indirect(dnode_t *dn, uint64_t fsize, int compress_alg_index)
 {
 	dnode_phys_t *dnp = dn->dn_phys;
 	int j;
@@ -1623,7 +1623,7 @@ dump_indirect(dnode_t *dn, uint64_t fsize)
 	for (j = 0; j < dnp->dn_nblkptr; j++) {
 		czb.zb_blkid = j;
 		(void) visit_indirect(dmu_objset_spa(dn->dn_objset), dnp,
-		    &dnp->dn_blkptr[j], &czb, fsize);
+		    &dnp->dn_blkptr[j], &czb, fsize, compress_alg_index);
 	}
 
 	(void) printf("\n");
@@ -2288,7 +2288,7 @@ static object_viewer_t *object_viewer[DMU_OT_NUMTYPES + 1] = {
 
 static void
 dump_object(objset_t *os, uint64_t object, int verbosity, int *print_header,
-    uint64_t *dnode_slots_used)
+    uint64_t *dnode_slots_used, int compress_alg_index)
 {
 	uint64_t fsize;
 
@@ -2428,7 +2428,7 @@ dump_object(objset_t *os, uint64_t object, int verbosity, int *print_header,
 	}
 
 	if (verbosity >= 5)
-		dump_indirect(dn, -1);
+		dump_indirect(dn, -1, compress_alg_index);
 
 	if (verbosity >= 5) {
 		/*
@@ -2467,7 +2467,7 @@ dump_object(objset_t *os, uint64_t object, int verbosity, int *print_header,
 
 	if (dumpfile_path) {
 		if (dn->dn_type == DMU_OT_PLAIN_FILE_CONTENTS)
-			dump_indirect(dn, fsize);
+			dump_indirect(dn, fsize, compress_alg_index);
 	}
 
 	if (db != NULL)
