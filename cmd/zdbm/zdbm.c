@@ -3330,9 +3330,10 @@ static uint64_t remap_deadlist_count = 0;
 
 /*ARGSUSED*/
 static int
-dump_one_dir(const char *dsname, void *arg, int compress_alg_index)
+dump_one_dir(const char *dsname, void *arg)
 {
 	int error;
+	int compress_alg_index = -1;
 	objset_t *os;
 	spa_feature_t f;
 
