@@ -1514,7 +1514,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		return (0);
 
 	if (fsize != -1 && BP_GET_LEVEL(bp) == 0) {
-		char *buf;
+		void *buf;
 		zdb_print_blkptr(bp, 0);
 
 		if (BP_IS_EMBEDDED(bp)) {
