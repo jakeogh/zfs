@@ -5460,7 +5460,7 @@ dump_zpool(spa_t *spa, int compress_alg_index)
 	if (dump_opt['d'] || dump_opt['i']) {
 		spa_feature_t f;
 		mos_refd_objs = range_tree_create(NULL, NULL);
-		dump_dir(dp->dp_meta_objset);
+		dump_dir(dp->dp_meta_objset, compress_alg_index);
 
 		if (dump_opt['d'] >= 3) {
 			dsl_pool_t *dp = spa->spa_dsl_pool;
@@ -6459,12 +6459,12 @@ main(int argc, char **argv)
 		if (os != NULL) {
 			if (dumpfile_path && argc != 1)
 				usage();
-			dump_dir(os);
+			dump_dir(os, compress_alg_index);
 			if (dumpfile_path) {
 				return (0);
 			}
 		} else if (zopt_objects > 0 && !dump_opt['m']) {
-			dump_dir(spa->spa_meta_objset);
+			dump_dir(spa->spa_meta_objset, compress_alg_index);
 		} else {
 			dump_zpool(spa, compress_alg_index);
 		}
