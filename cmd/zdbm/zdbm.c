@@ -1529,15 +1529,18 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			abd_t *pabd;
 			int flags = ZDB_FLAG_DECOMPRESS;
 			int ndvas = BP_GET_NDVAS(bp);
-                	char vdev[3];
-                	(void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
+			//char vdev[3];
+			char *vdev;
+			vdev = calloc(1, PATH_MAX * sizeof(char));
+			(void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
 			for (i = 0; i < ndvas; i++) {
 				(void) fprintf(stderr, "visit_indirect() i: %d\n", i);
 				dva_t *dva;      //
 				dva = bp->blk_dva; //
 				(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));  //0
 				(void) fprintf(stderr, "visit_indirect() : %llu\n",               DVA_GET_VDEV(&dva[i]));  //0
-				int count = snprintf(vdev, 2, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
+				//int count = snprintf(vdev, 2, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
+				int count = sprintf(vdev, "%llu", (u_longlong_t)DVA_GET_VDEV(&dva[i]));
                 	        (void) fprintf(stderr, "count: %d\n", count);
                 	        ASSERT(count <= 3);
 				(void) fprintf(stderr, "visit_indirect() vdev: %s\n", vdev);  //0
@@ -5894,7 +5897,7 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
 		(void) fprintf(stderr, "Found vdev type: %s\n", vd->vdev_ops->vdev_op_type);
 		(void) fprintf(stderr, "zdb_read_block() calling free(vdev)\n");
 		free(vdev);
-		(void) fprintf(stderr, "zdb_read_block() done calling free(vdev)\n");
+		(void) fprintf(stderr, "zdb_read_block() _done_ calling free(vdev)\n");
 		if (vd->vdev_path)
 			(void) fprintf(stderr, "Found vdev: %s\n",
 			    vd->vdev_path);
