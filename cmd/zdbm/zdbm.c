@@ -1560,7 +1560,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 				//(void) fprintf(stderr, "visit_indirect() about to *size = (size_t)psize\n");
                 		//*size = psize;  //uug
 				//(void) fprintf(stderr, "visit_indirect() after to *size = psize\n");
-				zdb_populate_block_buf(NULL, &buf, &lbuf, &borrowed, pabd, psize, BPE_GET_LSIZE(bp), DVA_GET_ASIZE(&dva[i]), flags, compress_alg_index);
+				zdb_populate_block_buf(NULL, &buf, &lbuf, &borrowed, pabd, psize, BPE_GET_LSIZE(bp), &DVA_GET_ASIZE(&dva[i]), flags, compress_alg_index);
 				//ok buf is populated. write it.
 				zdb_dump_block_raw(buf, fsize, 0);
 				if (borrowed)
@@ -5991,9 +5991,9 @@ zdb_populate_block_buf(char *thing, void **buf, void **lbuf, boolean_t *borrowed
 {
 	//boolean_t borrowed = B_FALSE;
 	//void *lbuf;
-	(void) fprintf(stderr, "zdb_populate_block_buf() psize: %lln\n", psize);
-	(void) fprintf(stderr, "zdb_populate_block_buf() bp_lsize: %lln\n", bp_lsize);
-	(void) fprintf(stderr, "zdb_populate_block_buf() *size: %lln\n", *size);
+	(void) fprintf(stderr, "zdb_populate_block_buf() psize: %ld\n", psize);
+	(void) fprintf(stderr, "zdb_populate_block_buf() bp_lsize: %ld\n", bp_lsize);
+	(void) fprintf(stderr, "zdb_populate_block_buf() *size: %ld\n", *size);
 
 	*lbuf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
 	if (flags & ZDB_FLAG_DECOMPRESS) {
