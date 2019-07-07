@@ -1536,7 +1536,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			int flags = ZDB_FLAG_DECOMPRESS;
 			int ndvas = BP_GET_NDVAS(bp);
 			zdb_print_blkptr(bp, 0);
-			uint64_t lsize = BPE_GET_LSIZE(bp); ASSERT FAIL !BP_IS_EMBEDDED(bp)
+			uint64_t lsize = BPE_GET_LSIZE(bp); //ASSERT FAIL !BP_IS_EMBEDDED(bp)
 			char *vdev;
 			vdev = calloc(1, PATH_MAX * sizeof(char));
 			dva_t *dva;
