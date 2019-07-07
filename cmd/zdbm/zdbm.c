@@ -1512,18 +1512,21 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 
 	if (fsize != -1 && BP_GET_LEVEL(bp) == 0) {
 		char *buf;
-		buf = malloc(SPA_MAXBLOCKSIZE); //umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL); ?
-		if (buf == NULL) {
-			(void) fprintf(stderr, "out of memory\n");
-			exit(1);
-		}
+		zdb_print_blkptr(bp, 0);
 
 		if (BP_IS_EMBEDDED(bp)) {
+			buf = malloc(SPA_MAXBLOCKSIZE); //umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL); ?
+			if (buf == NULL) {
+				(void) fprintf(stderr, "out of memory\n");
+				exit(1);
+			}
 			err = decode_embedded_bp(bp, buf, BPE_GET_LSIZE(bp));
 			if (err != 0) {
 				(void) fprintf(stderr, "decode failed: %u\n", err);
 				exit(1);
 			}
+			zdb_dump_block_raw(buf, fsize, 0);  //boken for non-embedded block pointers, buf is still all null.
+			free(buf);
 		} else {
 			uint64_t psize = 0;
 			abd_t *pabd;
@@ -1531,10 +1534,10 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			int ndvas = BP_GET_NDVAS(bp);
 			char *vdev;
 			vdev = calloc(1, PATH_MAX * sizeof(char));
+			dva_t *dva;
 			(void) fprintf(stderr, "visit_indirect() ndvas: %d\n", ndvas);
 			for (i = 0; i < ndvas; i++) {
 				(void) fprintf(stderr, "visit_indirect() i: %d\n", i);
-				dva_t *dva;
 				dva = bp->blk_dva;
 				(void) fprintf(stderr, "visit_indirect() : %llu\n", (u_longlong_t)DVA_GET_VDEV(&dva[i]));  //0
 				(void) fprintf(stderr, "visit_indirect() : %llu\n",               DVA_GET_VDEV(&dva[i]));  //0
@@ -1547,15 +1550,18 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 				    DVA_GET_ASIZE(&dva[i]), &psize, &pabd, flags);
 				(void) fprintf(stderr, "visit_indirect() done zdb_read_block()\n");
 
-
-
-
+				void *lbuf;
+				boolean_t borrowed = B_FALSE;
+				zdb_populate_block_buf(thing, &buf, &lbuf, &borrowed, pabd, psize, BPE_GET_LSIZE(bp), &size, flags, compress_alg_index);
+				//ok buf is populated. write it.
+				zdb_dump_block_raw(buf, fsize, 0);
+				if (borrowed)
+					abd_return_buf_copy(pabd, buf, size);
+				abd_free(pabd);
+				umem_free(lbuf, SPA_MAXBLOCKSIZE);  // *buf = lbuf;
 			}
 		}
-		(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp));
-		zdb_print_blkptr(bp, 0);
-		zdb_dump_block_raw(buf, fsize, 0);  //boken for non-embedded block pointers, buf is still all null.
-		free(buf);
+		//(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp));
 		return (err);
 	}
 
