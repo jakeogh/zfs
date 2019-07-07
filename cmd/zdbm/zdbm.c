@@ -5987,6 +5987,9 @@ zdb_populate_block_buf(char *thing, void **buf, void **lbuf, boolean_t *borrowed
 {
 	//boolean_t borrowed = B_FALSE;
 	//void *lbuf;
+	(void) fprintf(stderr, "zdb_populate_block_buf() psize: %lln\n", psize);
+	(void) fprintf(stderr, "zdb_populate_block_buf() bp_lsize: %lln\n", bp_lsize);
+	(void) fprintf(stderr, "zdb_populate_block_buf() *size: %lln\n", *size);
 
 	*lbuf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
 	if (flags & ZDB_FLAG_DECOMPRESS) {
