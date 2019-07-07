@@ -5991,7 +5991,7 @@ zdb_populate_block_buf(char *thing, void **buf, void **lbuf, boolean_t *borrowed
 	*lbuf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
 	if (flags & ZDB_FLAG_DECOMPRESS) {
 		zdb_decompress_block(thing, *buf, *lbuf, pabd, psize, bp_lsize,
-		    *size, compress_alg_index);
+		    &size, compress_alg_index);
 	} else {
 		*size = psize;
 		*buf = abd_borrow_buf_copy(pabd, *size);
