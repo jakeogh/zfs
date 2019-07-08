@@ -5823,6 +5823,10 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
         uint64_t psize, uint64_t bp_lsize, uint64_t *size,
         int compress_alg_index)
 {
+	(void) fprintf(stderr, "zdb_decompress_block() compress_alg_index: %d\n", compress_alg_index);
+	(void) fprintf(stderr, "zdb_decompress_block() psize: %ld\n", psize);
+	(void) fprintf(stderr, "zdb_decompress_block() bp_lsize: %ld\n", bp_lsize);
+	(void) fprintf(stderr, "zdb_decompress_block() *size: %ld\n", *size);
 	uint64_t lsize;
 	enum zio_compress c;
 	void *lbuf2 = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
