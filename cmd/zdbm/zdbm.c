@@ -5909,7 +5909,7 @@ out:
 	(void) fprintf(stderr, "umem_free lbuf2\n");
 	umem_free(lbuf2, SPA_MAXBLOCKSIZE);
 	(void) fprintf(stderr, "after umem_free lbuf2\n");
-	*buf = lbuf;
+	*buf = &lbuf;
 	return;
 }
 
