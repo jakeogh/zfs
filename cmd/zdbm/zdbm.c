@@ -5904,8 +5904,11 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
 	}
 
 out:
+	(void) fprintf(stderr, "umem_free lbuf2\n");
 	umem_free(lbuf2, SPA_MAXBLOCKSIZE);
+	(void) fprintf(stderr, "after umem_free lbuf2\n");
 	*buf = lbuf;
+	(void) fprintf(stderr, "zdb_decompress_block() lsize: %ld\n", lsize);
 	*size = lsize;
 	return;
 }
