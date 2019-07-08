@@ -1533,8 +1533,11 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 		} else {
 			uint64_t psize = 0;
 			abd_t *pabd;
-			int flags = ZDB_FLAG_DECOMPRESS;
-			(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp));
+			int flags = 0 ; //ZDB_FLAG_DECOMPRESS;
+			(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp)); //2
+			compress_alg_index = BP_GET_COMPRESS(bp);
+			if (compress_alg_index > 2)
+				flags = ZDB_FLAG_DECOMPRESS;
 			int ndvas = BP_GET_NDVAS(bp);
 			//zdb_print_blkptr(bp, 0);
 			//uint64_t lsize = BPE_GET_LSIZE(bp); //ASSERT FAIL !BP_IS_EMBEDDED(bp)
