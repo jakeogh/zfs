@@ -5863,8 +5863,10 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
 			    zio_compress_table[c].ci_name);
 
 			if (zdb_test_decompress(pabd, &lbuf, lbuf2, c,
-			    psize, lsize) == 0)
+			    psize, lsize) == 0) {
+				(void) fprintf(stderr, "goto out\n");
 				goto out;
+			}
 			continue;
 		}
 
