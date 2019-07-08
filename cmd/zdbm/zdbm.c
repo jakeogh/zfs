@@ -5818,7 +5818,7 @@ zdb_test_decompress(abd_t *pabd, void **lbuf, void *lbuf2, int c,
 	return (1);
 }
 
-static void  //should return int
+static void  //should return int // dont need thing
 zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
         uint64_t psize, uint64_t bp_lsize, uint64_t *size,
         int compress_alg_index)
@@ -5905,11 +5905,11 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
 
 out:
 	(void) fprintf(stderr, "zdb_decompress_block() lsize: %ld\n", lsize);
+	*size = lsize;
 	(void) fprintf(stderr, "umem_free lbuf2\n");
 	umem_free(lbuf2, SPA_MAXBLOCKSIZE);
 	(void) fprintf(stderr, "after umem_free lbuf2\n");
 	*buf = lbuf;
-	*size = lsize;
 	return;
 }
 
