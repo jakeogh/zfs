@@ -5828,6 +5828,7 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
 	(void) fprintf(stderr, "zdb_decompress_block() bp_lsize: %ld\n", bp_lsize);
 	(void) fprintf(stderr, "zdb_decompress_block() *size: %ld\n", *size);
 	(void) fprintf(stderr, "zdb_decompress_block() SPA_MINBLOCKSIZE: %d\n", SPA_MINBLOCKSIZE);
+	(void) fprintf(stderr, "zdb_decompress_block() SPA_MAXBLOCKSIZE: %d\n", SPA_MAXBLOCKSIZE);
 	uint64_t lsize;
 	enum zio_compress c;
 	void *lbuf2 = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
@@ -5843,6 +5844,8 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
 	 * we are not stuck.  On the other hand, printing progress
 	 * info gets old after a while.  What to do?
 	 */
+    //  for (lsize = 12800 + 512
+    //  for (lsize = 13312; lsize <= SPA_MAXBLOCKSIZE
 	for (lsize = psize + SPA_MINBLOCKSIZE;
 	    lsize <= SPA_MAXBLOCKSIZE; lsize += SPA_MINBLOCKSIZE) {
 		if (bp_lsize != -1)
