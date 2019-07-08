@@ -5827,6 +5827,7 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
 	(void) fprintf(stderr, "zdb_decompress_block() psize: %ld\n", psize);
 	(void) fprintf(stderr, "zdb_decompress_block() bp_lsize: %ld\n", bp_lsize);
 	(void) fprintf(stderr, "zdb_decompress_block() *size: %ld\n", *size);
+	(void) fprintf(stderr, "zdb_decompress_block() SPA_MINBLOCKSIZE: %d\n", SPA_MINBLOCKSIZE);
 	uint64_t lsize;
 	enum zio_compress c;
 	void *lbuf2 = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
