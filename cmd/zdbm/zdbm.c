@@ -5827,8 +5827,8 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
 	(void) fprintf(stderr, "zdb_decompress_block() psize: %ld\n", psize);
 	(void) fprintf(stderr, "zdb_decompress_block() bp_lsize: %ld\n", bp_lsize);
 	(void) fprintf(stderr, "zdb_decompress_block() *size: %ld\n", *size);
-	(void) fprintf(stderr, "zdb_decompress_block() SPA_MINBLOCKSIZE: %d\n", SPA_MINBLOCKSIZE);
-	(void) fprintf(stderr, "zdb_decompress_block() SPA_MAXBLOCKSIZE: %d\n", SPA_MAXBLOCKSIZE);
+	(void) fprintf(stderr, "zdb_decompress_block() SPA_MINBLOCKSIZE: %d\n", SPA_MINBLOCKSIZE);  // 512
+	(void) fprintf(stderr, "zdb_decompress_block() SPA_MAXBLOCKSIZE: %d\n", SPA_MAXBLOCKSIZE);  // 16777216
 	uint64_t lsize;
 	enum zio_compress c;
 	void *lbuf2 = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
@@ -5846,10 +5846,13 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
 	 */
     //  for (lsize = 12800 + 512
     //  for (lsize = 13312; lsize <= SPA_MAXBLOCKSIZE
+    //  for (lsize = 13312; lsize <= 16777216; lsize += 512)
+	if (bp_lsize != -1)
+		psize = bp_lsize;  // 12800 0x03200
 	for (lsize = psize + SPA_MINBLOCKSIZE;
 	    lsize <= SPA_MAXBLOCKSIZE; lsize += SPA_MINBLOCKSIZE) {
-		if (bp_lsize != -1)
-			lsize = bp_lsize;
+		//if (bp_lsize != -1)
+		//	lsize = bp_lsize;  // 12800 0x03200
 
 		(void) fprintf(stderr, "Trying %05llx -> %05llx: ",
 		    (u_longlong_t)psize, (u_longlong_t)lsize);
