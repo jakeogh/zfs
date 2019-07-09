@@ -5806,12 +5806,14 @@ parse_block_descriptor(char *thing, char **vdev, uint64_t *offset,
         (void) fprintf(stderr, "HERE: *flags: %d\n", *flags);
 }
 
+//zdb_test_decompress(abd_t *pabd, void *lbuf, void *lbuf2, int c,
+//	if (zio_decompress_data(c, pabd, *lbuf, psize, lsize) == 0 &&
 static int
-zdb_test_decompress(abd_t *pabd, void **lbuf, void *lbuf2, int c,
+zdb_test_decompress(abd_t *pabd, void *lbuf, void *lbuf2, int c,
         uint64_t psize, uint64_t lsize)
 {
 	VERIFY0(random_get_pseudo_bytes(lbuf2, lsize));
-	if (zio_decompress_data(c, pabd, *lbuf, psize, lsize) == 0 &&
+	if (zio_decompress_data(c, pabd, lbuf, psize, lsize) == 0 &&
 	    zio_decompress_data(c, pabd, lbuf2, psize, lsize) == 0 &&
 	    bcmp(*lbuf, lbuf2, lsize) == 0)
 	        return (0);
@@ -5819,7 +5821,7 @@ zdb_test_decompress(abd_t *pabd, void **lbuf, void *lbuf2, int c,
 }
 
 static void  //should return int // dont need thing
-zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
+zdb_decompress_block(char *thing, void *buf, void *lbuf, abd_t *pabd,
         uint64_t psize, uint64_t bp_lsize, uint64_t *size,
         int compress_alg_index)
 {
@@ -5862,7 +5864,7 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
 			(void) fprintf(stderr, "%s\n",
 			    zio_compress_table[c].ci_name);
 
-			if (zdb_test_decompress(pabd, &lbuf, lbuf2, c,
+			if (zdb_test_decompress(pabd, lbuf, lbuf2, c,
 			    psize, lsize) == 0) {
 				(void) fprintf(stderr, "goto out\n");
 				goto out;
@@ -5891,7 +5893,7 @@ zdb_decompress_block(char *thing, void **buf, void *lbuf, abd_t *pabd,
 			 * size / compression algorithm combination is
 			 * found.
 			 */
-			if (zdb_test_decompress(pabd, &lbuf, lbuf2,
+			if (zdb_test_decompress(pabd, lbuf, lbuf2,
 			    c, psize, lsize) == 0)
 				goto out;
 		}
@@ -5909,7 +5911,7 @@ out:
 	(void) fprintf(stderr, "umem_free lbuf2\n");
 	umem_free(lbuf2, SPA_MAXBLOCKSIZE);
 	(void) fprintf(stderr, "after umem_free lbuf2\n");
-	*buf = &lbuf;
+	buf = lbuf;
 	return;
 }
 
@@ -6011,7 +6013,7 @@ zdb_read_block(spa_t *spa, char *vdev, uint64_t offset, uint64_t size,
 }
 
 static void
-zdb_populate_block_buf(char *thing, void **buf, void **lbuf, boolean_t *borrowed,
+zdb_populate_block_buf(char *thing, void *buf, void *lbuf, boolean_t *borrowed,
         abd_t *pabd, uint64_t psize, uint64_t bp_lsize, uint64_t *size,
         int flags, int compress_alg_index)
 {
@@ -6023,13 +6025,12 @@ zdb_populate_block_buf(char *thing, void **buf, void **lbuf, boolean_t *borrowed
 	(void) fprintf(stderr, "zdb_populate_block_buf() *size: %ld\n", *size);
 	(void) fprintf(stderr, "zdb_populate_block_buf() flags: %d\n", flags);
 
-	*lbuf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
 	if (flags & ZDB_FLAG_DECOMPRESS) {
-		zdb_decompress_block(thing, *buf, *lbuf, pabd, psize, bp_lsize,
+		zdb_decompress_block(thing, buf, lbuf, pabd, psize, bp_lsize,
 		    size, compress_alg_index);
 	} else {
 		*size = psize;
-		*buf = abd_borrow_buf_copy(pabd, *size);
+		buf = abd_borrow_buf_copy(pabd, *size);
 		*borrowed = B_TRUE;
 	}
 	//umem_free(lbuf, SPA_MAXBLOCKSIZE);  // zdb_decompress_block() *buf = lbuf;
@@ -6053,8 +6054,10 @@ zdb_read_block_from_descriptor(char *thing, spa_t *spa, boolean_t display_block,
 	zdb_read_block(spa, vdev, offset, size, &psize, &pabd, flags);
 
 	void *lbuf, *buf;
+	lbuf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
+
 	boolean_t borrowed = B_FALSE;
-	zdb_populate_block_buf(thing, &buf, &lbuf, &borrowed, pabd, psize, bp_lsize, &size, flags, compress_alg_index);  //thing isnt useful
+	zdb_populate_block_buf(thing, buf, lbuf, &borrowed, pabd, psize, bp_lsize, &size, flags, compress_alg_index);  //thing isnt useful
 
 	if (display_block)
 		zdb_display_block(thing, buf, size, blkptr_offset, flags);
@@ -6063,7 +6066,7 @@ zdb_read_block_from_descriptor(char *thing, spa_t *spa, boolean_t display_block,
 		abd_return_buf_copy(pabd, buf, size);
 
 	abd_free(pabd);
-	umem_free(lbuf, SPA_MAXBLOCKSIZE);  // *buf = lbuf;
+	umem_free(lbuf, SPA_MAXBLOCKSIZE);  // buf = lbuf;
 	return;
 }
 
