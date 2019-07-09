@@ -5815,7 +5815,7 @@ zdb_test_decompress(abd_t *pabd, void *lbuf, void *lbuf2, int c,
 	VERIFY0(random_get_pseudo_bytes(lbuf2, lsize));
 	if (zio_decompress_data(c, pabd, lbuf, psize, lsize) == 0 &&
 	    zio_decompress_data(c, pabd, lbuf2, psize, lsize) == 0 &&
-	    bcmp(*lbuf, lbuf2, lsize) == 0)
+	    bcmp(lbuf, lbuf2, lsize) == 0)
 	        return (0);
 	return (1);
 }
