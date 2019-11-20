@@ -25,7 +25,7 @@
 #
 
 #
-# Copyright (c) 2013, 2016 by Delphix. All rights reserved.
+# Copyright (c) 2013, 2018 by Delphix. All rights reserved.
 #
 
 . $STF_SUITE/include/libtest.shlib
@@ -158,14 +158,9 @@ function cmp_md5s {
 	typeset file1=$1
 	typeset file2=$2
 
-	eval md5sum $file1 | awk '{ print $1 }'	> $BACKDIR/md5_file1
-	eval md5sum $file2 | awk '{ print $1 }'	> $BACKDIR/md5_file2
-	diff $BACKDIR/md5_file1 $BACKDIR/md5_file2
-	typeset -i ret=$?
-
-	rm -f $BACKDIR/md5_file1 $BACKDIR/md5_file2
-
-	return $ret
+	typeset sum1=$(md5digest $file1)
+	typeset sum2=$(md5digest $file2)
+	test "$sum1" = "$sum2"
 }
 
 #
@@ -343,7 +338,7 @@ function getds_with_suffix
 }
 
 #
-# Output inherited properties whitch is edited for file system
+# Output inherited properties which is edited for file system
 #
 function fs_inherit_prop
 {
@@ -635,7 +630,7 @@ function resume_test
 		stream_num=$((stream_num+1))
 
 		token=$(zfs get -Hp -o value receive_resume_token $recvfs)
-		log_must eval "zfs send -v -t $token >/$streamfs/$stream_num"
+		log_must eval "zfs send -t $token  >/$streamfs/$stream_num"
 		[[ -f /$streamfs/$stream_num ]] || \
 		    log_fail "NO FILE /$streamfs/$stream_num"
 	done
@@ -754,7 +749,7 @@ function verify_stream_size
 	datasetexists $ds || log_fail "No such dataset: $ds"
 
 	typeset stream_size=$(cat $stream | zstreamdump | sed -n \
-	    's/	Total write size = \(.*\) (0x.*)/\1/p')
+	    's/	Total payload size = \(.*\) (0x.*)/\1/p')
 
 	typeset inc_size=0
 	if [[ -n $inc_src ]]; then

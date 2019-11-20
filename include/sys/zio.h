@@ -102,7 +102,6 @@ enum zio_checksum {
 #define	ZIO_CHECKSUM_VERIFY	(1 << 8)
 
 #define	ZIO_DEDUPCHECKSUM	ZIO_CHECKSUM_SHA256
-#define	ZIO_DEDUPDITTO_MIN	100
 
 /* supported encryption algorithms */
 enum zio_encrypt {
@@ -265,16 +264,6 @@ enum zio_wait_type {
 	ZIO_WAIT_DONE,
 	ZIO_WAIT_TYPES
 };
-
-/*
- * We'll take the unused errnos, 'EBADE' and 'EBADR' (from the Convergent
- * graveyard) to indicate checksum errors and fragmentation.
- */
-#define	ECKSUM	EBADE
-#define	EFRAGS	EBADR
-
-/* Similar for ENOACTIVE */
-#define	ENOTACTIVE	ENOANO
 
 typedef void zio_done_func_t(zio_t *zio);
 

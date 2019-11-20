@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 #
 # This file and its contents are supplied under the terms of the
@@ -160,17 +160,9 @@ summary = {
 # reasons listed above can be used.
 #
 known = {
-    'casenorm/sensitive_none_lookup': ['FAIL', '7633'],
-    'casenorm/sensitive_none_delete': ['FAIL', '7633'],
     'casenorm/sensitive_formd_lookup': ['FAIL', '7633'],
     'casenorm/sensitive_formd_delete': ['FAIL', '7633'],
-    'casenorm/insensitive_none_lookup': ['FAIL', '7633'],
-    'casenorm/insensitive_none_delete': ['FAIL', '7633'],
-    'casenorm/insensitive_formd_lookup': ['FAIL', '7633'],
-    'casenorm/insensitive_formd_delete': ['FAIL', '7633'],
-    'casenorm/mixed_none_lookup': ['FAIL', '7633'],
     'casenorm/mixed_none_lookup_ci': ['FAIL', '7633'],
-    'casenorm/mixed_none_delete': ['FAIL', '7633'],
     'casenorm/mixed_formd_lookup': ['FAIL', '7633'],
     'casenorm/mixed_formd_lookup_ci': ['FAIL', '7633'],
     'casenorm/mixed_formd_delete': ['FAIL', '7633'],
@@ -186,11 +178,9 @@ known = {
     'inuse/inuse_007_pos': ['SKIP', na_reason],
     'privilege/setup': ['SKIP', na_reason],
     'refreserv/refreserv_004_pos': ['FAIL', known_reason],
-    'removal/removal_condense_export': ['SKIP', known_reason],
     'removal/removal_with_zdb': ['SKIP', known_reason],
     'rootpool/setup': ['SKIP', na_reason],
     'rsend/rsend_008_pos': ['SKIP', '6066'],
-    'snapshot/rollback_003_pos': ['SKIP', '6143'],
     'vdev_zaps/vdev_zaps_007_pos': ['FAIL', known_reason],
     'xattr/xattr_008_pos': ['SKIP', na_reason],
     'xattr/xattr_009_neg': ['SKIP', na_reason],
@@ -223,8 +213,6 @@ maybe = {
     'cli_root/zdb/zdb_006_pos': ['FAIL', known_reason],
     'cli_root/zfs_get/zfs_get_004_pos': ['FAIL', known_reason],
     'cli_root/zfs_get/zfs_get_009_pos': ['SKIP', '5479'],
-    'cli_root/zfs_rollback/zfs_rollback_001_pos': ['FAIL', '6415'],
-    'cli_root/zfs_rollback/zfs_rollback_002_pos': ['FAIL', '6416'],
     'cli_root/zfs_share/setup': ['SKIP', share_reason],
     'cli_root/zfs_snapshot/zfs_snapshot_002_neg': ['FAIL', known_reason],
     'cli_root/zfs_unshare/setup': ['SKIP', share_reason],

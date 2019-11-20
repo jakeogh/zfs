@@ -21,7 +21,7 @@
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
- * Copyright (c) 2012, 2016 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2018 by Delphix. All rights reserved.
  * Copyright (c) 2012, Joyent, Inc. All rights reserved.
  */
 
@@ -52,7 +52,6 @@
 #include <sys/uio_impl.h>
 #include <sys/time.h>
 #include <sys/zone.h>
-#include <sys/sdt.h>
 #include <sys/kstat.h>
 #include <sys/zfs_debug.h>
 #include <sys/sysevent.h>
@@ -65,6 +64,8 @@
 #include <sys/procfs_list.h>
 #include <linux/dcache_compat.h>
 #include <linux/utsname_compat.h>
+#include <sys/mod.h>
+#include <sys/sysmacros.h>
 
 #else /* _KERNEL */
 
@@ -105,9 +106,9 @@
 #include <sys/resource.h>
 #include <sys/byteorder.h>
 #include <sys/list.h>
+#include <sys/mod.h>
 #include <sys/uio.h>
 #include <sys/zfs_debug.h>
-#include <sys/sdt.h>
 #include <sys/kstat.h>
 #include <sys/u8_textprep.h>
 #include <sys/sysevent.h>
@@ -115,6 +116,7 @@
 #include <sys/sunddi.h>
 #include <sys/debug.h>
 #include <sys/utsname.h>
+#include <sys/trace_zfs.h>
 
 /*
  * Stack
@@ -122,6 +124,7 @@
 
 #define	noinline	__attribute__((noinline))
 #define	likely(x)	__builtin_expect((x), 1)
+#define	unlikely(x)	__builtin_expect((x), 0)
 
 /*
  * Debugging
@@ -171,33 +174,38 @@ extern int aok;
 #ifdef DTRACE_PROBE
 #undef	DTRACE_PROBE
 #endif	/* DTRACE_PROBE */
-#define	DTRACE_PROBE(a) \
-	ZFS_PROBE0(#a)
+#define	DTRACE_PROBE(a)
 
 #ifdef DTRACE_PROBE1
 #undef	DTRACE_PROBE1
 #endif	/* DTRACE_PROBE1 */
-#define	DTRACE_PROBE1(a, b, c) \
-	ZFS_PROBE1(#a, (unsigned long)c)
+#define	DTRACE_PROBE1(a, b, c)
 
 #ifdef DTRACE_PROBE2
 #undef	DTRACE_PROBE2
 #endif	/* DTRACE_PROBE2 */
-#define	DTRACE_PROBE2(a, b, c, d, e) \
-	ZFS_PROBE2(#a, (unsigned long)c, (unsigned long)e)
+#define	DTRACE_PROBE2(a, b, c, d, e)
 
 #ifdef DTRACE_PROBE3
 #undef	DTRACE_PROBE3
 #endif	/* DTRACE_PROBE3 */
-#define	DTRACE_PROBE3(a, b, c, d, e, f, g) \
-	ZFS_PROBE3(#a, (unsigned long)c, (unsigned long)e, (unsigned long)g)
+#define	DTRACE_PROBE3(a, b, c, d, e, f, g)
 
 #ifdef DTRACE_PROBE4
 #undef	DTRACE_PROBE4
 #endif	/* DTRACE_PROBE4 */
-#define	DTRACE_PROBE4(a, b, c, d, e, f, g, h, i) \
-	ZFS_PROBE4(#a, (unsigned long)c, (unsigned long)e, (unsigned long)g, \
-	(unsigned long)i)
+#define	DTRACE_PROBE4(a, b, c, d, e, f, g, h, i)
+
+/*
+ * Tunables.
+ */
+typedef struct zfs_kernel_param {
+	const char *name;	/* unused stub */
+} zfs_kernel_param_t;
+
+#define	ZFS_MODULE_PARAM(scope_prefix, name_prefix, name, type, perm, desc)
+#define	ZFS_MODULE_PARAM_CALL(scope_prefix, name_prefix, name, setfunc, \
+	getfunc, perm, desc)
 
 /*
  * Threads.
@@ -257,6 +265,8 @@ extern void mutex_enter(kmutex_t *mp);
 extern void mutex_exit(kmutex_t *mp);
 extern int mutex_tryenter(kmutex_t *mp);
 
+#define	NESTED_SINGLE 1
+#define	mutex_enter_nested(mp, class) mutex_enter(mp)
 /*
  * RW locks
  */
@@ -305,6 +315,7 @@ typedef pthread_cond_t		kcondvar_t;
 extern void cv_init(kcondvar_t *cv, char *name, int type, void *arg);
 extern void cv_destroy(kcondvar_t *cv);
 extern void cv_wait(kcondvar_t *cv, kmutex_t *mp);
+extern int cv_wait_sig(kcondvar_t *cv, kmutex_t *mp);
 extern clock_t cv_timedwait(kcondvar_t *cv, kmutex_t *mp, clock_t abstime);
 extern clock_t cv_timedwait_hires(kcondvar_t *cvp, kmutex_t *mp, hrtime_t tim,
     hrtime_t res, int flag);
@@ -313,8 +324,8 @@ extern void cv_broadcast(kcondvar_t *cv);
 
 #define	cv_timedwait_io(cv, mp, at)		cv_timedwait(cv, mp, at)
 #define	cv_timedwait_sig(cv, mp, at)		cv_timedwait(cv, mp, at)
-#define	cv_wait_sig(cv, mp)			cv_wait(cv, mp)
 #define	cv_wait_io(cv, mp)			cv_wait(cv, mp)
+#define	cv_wait_io_sig(cv, mp)			cv_wait_sig(cv, mp)
 #define	cv_timedwait_sig_hires(cv, mp, t, r, f) \
 	cv_timedwait_hires(cv, mp, t, r, f)
 
@@ -395,6 +406,7 @@ void procfs_list_add(procfs_list_t *procfs_list, void *p);
 #define	KMC_NODEBUG		UMC_NODEBUG
 #define	KMC_KMEM		0x0
 #define	KMC_VMEM		0x0
+#define	KMC_KVMEM		0x0
 #define	kmem_alloc(_s, _f)	umem_alloc(_s, _f)
 #define	kmem_zalloc(_s, _f)	umem_zalloc(_s, _f)
 #define	kmem_free(_b, _s)	umem_free(_b, _s)
@@ -590,9 +602,7 @@ extern int fop_getattr(vnode_t *vp, vattr_t *vap);
 
 #define	VOP_FSYNC(vp, f, cr, ct)	fsync((vp)->v_fd)
 
-#if defined(HAVE_FILE_FALLOCATE) && \
-	defined(FALLOC_FL_PUNCH_HOLE) && \
-	defined(FALLOC_FL_KEEP_SIZE)
+#if defined(FALLOC_FL_PUNCH_HOLE) && defined(FALLOC_FL_KEEP_SIZE)
 #define	VOP_SPACE(vp, cmd, flck, fl, off, cr, ct) \
 	fallocate((vp)->v_fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, \
 	    (flck)->l_start, (flck)->l_len)
@@ -707,7 +717,8 @@ extern uint32_t zone_get_hostid(void *zonep);
 
 extern char *kmem_vasprintf(const char *fmt, va_list adx);
 extern char *kmem_asprintf(const char *fmt, ...);
-#define	strfree(str) kmem_free((str), strlen(str) + 1)
+#define	kmem_strfree(str) kmem_free((str), strlen(str) + 1)
+#define	kmem_strdup(s)  strdup(s)
 
 /*
  * Hostname information
