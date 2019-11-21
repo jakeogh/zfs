@@ -178,7 +178,7 @@ usage(void)
 	    "<poolname>\n"
 	    "\t%s -Z <dumpfile_path> <dataset> <object>\n\n",
 	    cmdname, cmdname, cmdname, cmdname, cmdname, cmdname, cmdname,
-	    cmdname, cmdname, cmdname);
+	    cmdname, cmdname, cmdname, cmdname);
 
 	(void) fprintf(stderr, "    Dataset name must include at least one "
 	    "separator character '/' or '@'\n");
