@@ -3,6 +3,7 @@ dist_man_MANS = \
 	mount.zfs.8 \
 	vdev_id.8 \
 	zdb.8 \
+	zdbm.8 \
 	zfs.8 \
 	zfsconcepts.8 \
 	zfsprops.8 \

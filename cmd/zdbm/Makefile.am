@@ -5,11 +5,11 @@ AM_CPPFLAGS += -DDEBUG -UNDEBUG
 
 sbin_PROGRAMS = zdbm
 
-zdb_SOURCES = \
+zdbm_SOURCES = \
 	zdbm.c \
 	zdbm_il.c \
 	zdbm.h
 
-zdb_LDADD = \
+zdbm_LDADD = \
 	$(top_builddir)/lib/libnvpair/libnvpair.la \
 	$(top_builddir)/lib/libzpool/libzpool.la
