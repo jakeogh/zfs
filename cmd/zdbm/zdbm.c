@@ -6808,6 +6808,7 @@ zdb_read_block_from_descriptor(char *thing, spa_t *spa, boolean_t display_block,
 
 	void *lbuf, *buf;
 	lbuf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
+	buf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
 
 	boolean_t borrowed = B_FALSE;
 	zdb_populate_block_buf(thing, buf, lbuf, &borrowed, pabd, psize, bp_lsize, &size, flags, compress_alg_index);  //thing isnt useful
