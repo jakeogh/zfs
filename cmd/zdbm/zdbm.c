@@ -1627,7 +1627,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 {
 	int err = 0;
 	int i;
-
+	(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp));
 	if (bp->blk_birth == 0)
 		return (0);
 
@@ -1652,7 +1652,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 			uint64_t psize = 0;
 			abd_t *pabd;
 			int flags = 0 ; //ZDB_FLAG_DECOMPRESS;
-			(void) fprintf(stderr, "visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp)); //2
+			(void) fprintf(stderr, "else visit_indirect() BP_GET_COMPRESS(bp): %lld\n", BP_GET_COMPRESS(bp)); //2
 			compress_alg_index = BP_GET_COMPRESS(bp);
 			if (compress_alg_index > 2)
 				flags = ZDB_FLAG_DECOMPRESS;
@@ -2814,6 +2814,8 @@ dump_object(objset_t *os, uint64_t object, int verbosity, boolean_t *print_heade
 
 	if (dumpfile_path) {
 		if (dn->dn_type == DMU_OT_PLAIN_FILE_CONTENTS)
+			dump_indirect(dn, fsize, compress_alg_index);
+		if (dn->dn_type == DMU_OT_DIRECTORY_CONTENTS)
 			dump_indirect(dn, fsize, compress_alg_index);
 	}
 
