@@ -1685,6 +1685,7 @@ visit_indirect(spa_t *spa, const dnode_phys_t *dnp,
 				//    DVA_GET_ASIZE(&dva[i]), &psize, &pabd, flags);
 				(void) fprintf(stderr, "visit_indirect() done zdb_read_block()\n");
 				void *lbuf;
+				void *buf;
 				boolean_t borrowed = B_FALSE;
 				(void) fprintf(stderr, "visit_indirect() calling zdb_populate_block()\n");
 				zdb_populate_block_buf(NULL, &buf, &lbuf, &borrowed, pabd, psize, asize, &asize, flags, compress_alg_index);
@@ -6808,7 +6809,7 @@ zdb_read_block_from_descriptor(char *thing, spa_t *spa, boolean_t display_block,
 
 	void *lbuf, *buf;
 	lbuf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
-	buf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);
+	buf = umem_alloc(SPA_MAXBLOCKSIZE, UMEM_NOFAIL);  //hm, allocated below in zdb_embedded_block
 
 	boolean_t borrowed = B_FALSE;
 	zdb_populate_block_buf(thing, buf, lbuf, &borrowed, pabd, psize, bp_lsize, &size, flags, compress_alg_index);  //thing isnt useful
