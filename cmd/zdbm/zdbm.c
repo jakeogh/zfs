@@ -2629,7 +2629,7 @@ static object_viewer_t *object_viewer[DMU_OT_NUMTYPES + 1] = {
 };
 
 static void
-dump_object(objset_t *os, uint64_t object, int verbosity, int *print_header,
+dump_object(objset_t *os, uint64_t object, int verbosity, boolean_t *print_header,
     uint64_t *dnode_slots_used, int compress_alg_index)
 {
 	uint64_t fsize;
@@ -2671,7 +2671,7 @@ dump_object(objset_t *os, uint64_t object, int verbosity, int *print_header,
 		(void) printf("\n%10s  %3s  %5s  %5s  %5s  %6s  %5s  %6s  %s\n",
 		    "Object", "lvl", "iblk", "dblk", "dsize", "dnsize",
 		    "lsize", "%full", "type");
-		*print_header = 0;
+		*print_header = B_FALSE;
 	}
 
 	if (object == 0) {
