@@ -6348,6 +6348,7 @@ zdb_dump_gbh(void *buf, int flags)
 static void
 zdb_dump_block_raw(void *buf, uint64_t size, int flags)
 {
+	(void) fprintf(stderr, "zdb_dump_block_raw() size: %ld\n", size);
 	int dumpfile_fd = -1;
 	if (flags & ZDB_FLAG_BSWAP)
 		byteswap_uint64_array(buf, size);
