@@ -1068,6 +1068,7 @@ extern char *spa_strdup(const char *);
 extern void spa_strfree(char *);
 extern uint64_t spa_get_random(uint64_t range);
 extern uint64_t spa_generate_guid(spa_t *spa);
+extern void zfs_panic_recover_blkptr(const blkptr_t *bp, const char *fmt, ...);
 extern void snprintf_blkptr(char *buf, size_t buflen, const blkptr_t *bp);
 extern void spa_freeze(spa_t *spa);
 extern int spa_change_guid(spa_t *spa);

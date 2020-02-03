@@ -1535,6 +1535,16 @@ spa_freeze(spa_t *spa)
 }
 
 void
+zfs_panic_recover_blkptr(const blkptr_t *bp, const char *fmt, ...)
+{
+	char blkbuf[BP_SPRINTF_LEN];
+	(void) snprintf(blkbuf, sizeof (blkbuf), ", panic ");
+	(void) snprintf_blkptr(blkbuf + strlen(blkbuf), sizeof (blkbuf) -
+	    strlen(blkbuf), bp);
+	zfs_panic_recover(fmt, ...);  // wrong, not sure if that is possible
+}
+
+void
 zfs_panic_recover(const char *fmt, ...)
 {
 	va_list adx;
