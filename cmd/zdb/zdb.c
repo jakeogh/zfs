@@ -187,7 +187,8 @@ usage(void)
 	    "\t\t<poolname> <vdev>:<offset>:<size>[:<flags>]\n"
 	    "\t%s -E [-A] word0:word1:...:word15\n"
 	    "\t%s -S [-AP] [-e [-V] [-p <path> ...]] [-U <cache>] "
-	    "<poolname>\n\n",
+	    "<poolname>\n",
+	    "\t%s -Z <poolname>\n\n",
 	    cmdname, cmdname, cmdname, cmdname, cmdname, cmdname, cmdname,
 	    cmdname, cmdname, cmdname);
 
@@ -234,6 +235,7 @@ usage(void)
 	(void) fprintf(stderr, "        -S simulate dedup to measure effect\n");
 	(void) fprintf(stderr, "        -v verbose (applies to all "
 	    "others)\n\n");
+	(void) fprintf(stderr, "        -Z dump pool metadata only\n");
 	(void) fprintf(stderr, "    Below options are intended for use "
 	    "with other options:\n");
 	(void) fprintf(stderr, "        -A ignore assertions (-A), enable "
@@ -7055,7 +7057,7 @@ main(int argc, char **argv)
 	zfs_btree_verify_intensity = 3;
 
 	while ((c = getopt(argc, argv,
-	    "AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XY")) != -1) {
+	    "AbcCdDeEFGhiI:klLmMo:Op:PqRsSt:uU:vVx:XYZ")) != -1) {
 		switch (c) {
 		case 'b':
 		case 'c':
@@ -7090,6 +7092,8 @@ main(int argc, char **argv)
 		case 'Y':
 			zfs_reconstruct_indirect_combinations_max = INT_MAX;
 			zfs_deadman_enabled = 0;
+			break;
+		case 'Z':
 			break;
 		/* NB: Sort single match options below. */
 		case 'I':
@@ -7452,7 +7456,7 @@ main(int argc, char **argv)
 					    strerror(errno));
 			}
 		}
-		if (os != NULL) {
+		if (os != NULL && !dump_opt['Z']) {
 			dump_objset(os);
 		} else if (zopt_object_args > 0 && !dump_opt['m']) {
 			dump_objset(spa->spa_meta_objset);
