@@ -187,7 +187,7 @@ usage(void)
 	    "\t\t<poolname> <vdev>:<offset>:<size>[:<flags>]\n"
 	    "\t%s -E [-A] word0:word1:...:word15\n"
 	    "\t%s -S [-AP] [-e [-V] [-p <path> ...]] [-U <cache>] "
-	    "<poolname>\n",
+	    "<poolname>\n"
 	    "\t%s -Z <poolname>\n\n",
 	    cmdname, cmdname, cmdname, cmdname, cmdname, cmdname, cmdname,
 	    cmdname, cmdname, cmdname, cmdname);
@@ -234,8 +234,8 @@ usage(void)
 	(void) fprintf(stderr, "        -s report stats on zdb's I/O\n");
 	(void) fprintf(stderr, "        -S simulate dedup to measure effect\n");
 	(void) fprintf(stderr, "        -v verbose (applies to all "
-	    "others)\n\n");
-	(void) fprintf(stderr, "        -Z dump pool metadata only\n");
+	    "others)\n");
+	(void) fprintf(stderr, "        -Z dump pool metadata only\n\n");
 	(void) fprintf(stderr, "    Below options are intended for use "
 	    "with other options:\n");
 	(void) fprintf(stderr, "        -A ignore assertions (-A), enable "
@@ -1853,6 +1853,8 @@ dump_bptree_cb(void *arg, const blkptr_t *bp, dmu_tx_t *tx)
 static void
 dump_bptree(objset_t *os, uint64_t obj, const char *name)
 {
+
+	(void) printf("\ndump_bptree()\n");
 	char bytes[32];
 	bptree_phys_t *bt;
 	dmu_buf_t *db;
@@ -1876,6 +1878,7 @@ dump_bptree(objset_t *os, uint64_t obj, const char *name)
 	(void) printf("\n");
 
 	(void) bptree_iterate(os, obj, B_FALSE, dump_bptree_cb, NULL, NULL);
+	(void) printf("\nexiting dump_bptree()\n");
 }
 
 /* ARGSUSED */
@@ -2960,6 +2963,7 @@ out:
 static void
 dump_objset(objset_t *os)
 {
+	(void) printf("\ndump_objset()\n");
 	dmu_objset_stats_t dds = { 0 };
 	uint64_t object, object_count;
 	uint64_t refdbytes, usedobjs, scratch;
@@ -3121,6 +3125,7 @@ dump_objset(objset_t *os)
 		    leaked_objects);
 		leaked_objects = 0;
 	}
+	(void) printf("\nexiting dump_objset()\n");
 }
 
 static void
@@ -6297,8 +6302,21 @@ dump_log_spacemap_obsolete_stats(spa_t *spa)
 static void
 dump_zpool(spa_t *spa)
 {
+	(void) printf("\ndump_zpool()\n");
 	dsl_pool_t *dp = spa_get_dsl(spa);
 	int rc = 0;
+
+	(void) printf("dump_opt['S']: %d:\n", dump_opt['S']);
+	(void) printf("dump_opt['e']: %d:\n", dump_opt['e']);
+	(void) printf("dump_opt['C']: %d:\n", dump_opt['C']);
+	(void) printf("dump_opt['u']: %d:\n", dump_opt['u']);
+	(void) printf("dump_opt['D']: %d:\n", dump_opt['D']);
+	(void) printf("dump_opt['d']: %d:\n", dump_opt['d']);
+	(void) printf("dump_opt['m']: %d:\n", dump_opt['m']);
+	(void) printf("dump_opt['M']: %d:\n", dump_opt['M']);
+	(void) printf("dump_opt['i']: %d:\n", dump_opt['i']);
+	(void) printf("dump_opt['L']: %d:\n", dump_opt['L']);
+	(void) printf("dump_opt['Z']: %d:\n", dump_opt['Z']);
 
 	if (dump_opt['S']) {
 		dump_simulated_ddt(spa);
@@ -6327,6 +6345,7 @@ dump_zpool(spa_t *spa)
 		dump_log_spacemaps(spa);
 		dump_log_spacemap_obsolete_stats(spa);
 	}
+
 
 	if (dump_opt['d'] || dump_opt['i']) {
 		spa_feature_t f;
@@ -7076,6 +7095,7 @@ main(int argc, char **argv)
 		case 's':
 		case 'S':
 		case 'u':
+			(void) fprintf(stderr, "case u\n");
 			dump_opt[c]++;
 			dump_all = 0;
 			break;
@@ -7087,6 +7107,7 @@ main(int argc, char **argv)
 		case 'P':
 		case 'q':
 		case 'X':
+			(void) fprintf(stderr, "case X\n");
 			dump_opt[c]++;
 			break;
 		case 'Y':
@@ -7094,6 +7115,7 @@ main(int argc, char **argv)
 			zfs_deadman_enabled = 0;
 			break;
 		case 'Z':
+			(void) fprintf(stderr, "case Z\n");
 			break;
 		/* NB: Sort single match options below. */
 		case 'I':
@@ -7218,8 +7240,11 @@ main(int argc, char **argv)
 	if (dump_all)
 		verbose = MAX(verbose, 1);
 
+	(void) fprintf(stderr, "dump_all: %d\n", dump_all);
+	(void) fprintf(stderr, "verbose: %d\n", verbose);
+
 	for (c = 0; c < 256; c++) {
-		if (dump_all && strchr("AeEFklLOPRSX", c) == NULL)
+		if (dump_all && strchr("AeEFklLOPRSXZ", c) == NULL)
 			dump_opt[c] = 1;
 		if (dump_opt[c])
 			dump_opt[c] += verbose;

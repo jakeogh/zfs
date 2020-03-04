@@ -189,6 +189,7 @@ int
 bptree_iterate(objset_t *os, uint64_t obj, boolean_t free, bptree_itor_t func,
     void *arg, dmu_tx_t *tx)
 {
+	(void) printf("bptree_iterate() free: %d\n", free);
 	boolean_t ioerr = B_FALSE;
 	int err;
 	uint64_t i;
@@ -300,5 +301,6 @@ bptree_iterate(objset_t *os, uint64_t obj, boolean_t free, bptree_itor_t func,
 
 	dmu_buf_rele(db, FTAG);
 
+	(void) printf("exiting bptree_iterate()\n");
 	return (err);
 }
